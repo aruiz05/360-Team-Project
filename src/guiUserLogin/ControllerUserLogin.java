@@ -67,25 +67,47 @@ public class ControllerUserLogin {
 		String username = ViewUserLogin.text_Username.getText();
 		String password = ViewUserLogin.text_Password.getText();
     	boolean loginResult = false;
+
+		// All text fields are checked for excessive length before any other validation
+		if ((username != null && username.length() > 16) ||
+				(password != null && password.length() > 64)) {
+			displayLoginError();
+			return;
+		}
+
+		if (username == null || password == null || username.length() == 0 ||
+				password.length() == 0) {
+			displayLoginError();
+			return;
+		}
     	
 		// Fetch the user and verify the username
-     	if (theDatabase.getUserAccountDetails(username) == false) {
-     		// Don't provide too much information.  Don't say the username is invalid or the
-     		// password is invalid.  Just say the pair is invalid.
-    		ViewUserLogin.alertUsernamePasswordError.setContentText(
-    				"Incorrect username/password. Try again!");
-    		ViewUserLogin.alertUsernamePasswordError.showAndWait();
+		if (theDatabase.getUserAccountDetails(username) == false) {
+			displayLoginError();
     		return;
     	}
 		// System.out.println("*** Username is valid");
+
+		// A valid one-time password is consumed immediately and may only reach the forced reset
+		// page.  No User session or role-based home page is created for this login.
+		if (theDatabase.consumeOneTimePassword(username, password)) {
+			ViewUserLogin.text_Password.clear();
+			guiPasswordReset.ViewPasswordReset.displayPasswordReset(theStage, username);
+			return;
+		}
+
+		// While a reset is required, neither the old permanent password nor a used one-time
+		// password may log the user in.
+		if (theDatabase.isPasswordResetRequired(username)) {
+			displayLoginError();
+			return;
+		}
 		
 		// Check to see that the login password matches the account password
     	String actualPassword = theDatabase.getCurrentPassword();
     	
     	if (password.compareTo(actualPassword) != 0) {
-    		ViewUserLogin.alertUsernamePasswordError.setContentText(
-    				"Incorrect username/password. Try again!");
-    		ViewUserLogin.alertUsernamePasswordError.showAndWait();
+			displayLoginError();
     		return;
     	}
 		// System.out.println("*** Password is valid for this user");
@@ -129,6 +151,13 @@ public class ControllerUserLogin {
 			guiMultipleRoleDispatch.ViewMultipleRoleDispatch.
 				displayMultipleRoleDispatch(theStage, user);
 		}
+	}
+
+	// Use one message for every unsuccessful login so account details are not disclosed
+	private static void displayLoginError() {
+		ViewUserLogin.alertUsernamePasswordError.setContentText(
+				"The username or password is incorrect.");
+		ViewUserLogin.alertUsernamePasswordError.showAndWait();
 	}
 	
 		
