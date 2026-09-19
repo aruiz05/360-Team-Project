@@ -45,6 +45,7 @@ public class Database {
 	static final String PASS = ""; 
 
 	//  Shared variables used within this class
+	private final String databaseURL;			// Database URL used by this instance
 	private Connection connection = null;		// Singleton to access the database 
 	private Statement statement = null;			// The H2 Statement is used to construct queries
 	
@@ -69,7 +70,19 @@ public class Database {
 	 */
 	
 	public Database () {
-		
+		databaseURL = DB_URL;
+	}
+
+	/*******
+	 * <p> Method: Database(String url) </p>
+	 *
+	 * <p> Description: Package-protected constructor used by automated database tests so the
+	 * application database is not changed while tests are running.</p>
+	 *
+	 * @param url specifies the H2 database URL used by the test
+	 */
+	Database(String url) {
+		databaseURL = url;
 	}
 	
 	
@@ -85,7 +98,7 @@ public class Database {
 	public void connectToDatabase() throws SQLException {
 		try {
 			Class.forName(JDBC_DRIVER); // Load the JDBC driver
-			connection = DriverManager.getConnection(DB_URL, USER, PASS);
+			connection = DriverManager.getConnection(databaseURL, USER, PASS);
 			statement = connection.createStatement(); 
 			// You can use this command to clear the database and restart from fresh.
 			//statement.execute("DROP ALL OBJECTS");
@@ -243,6 +256,34 @@ public class Database {
 	    }
 //		System.out.println(userList);
 		return userList;
+	}
+
+	/*******
+	 * <p> Method: deleteUser(String username, String administratorUsername) </p>
+	 *
+	 * <p> Description: Remove an account only when the acting user still has the Admin role
+	 * and is not removing their own account.  Both checks are part of the deletion statement.</p>
+	 *
+	 * @param username specifies the account to be removed
+	 * @param administratorUsername specifies the signed-in administrator
+	 * @return true when one account was removed, else false
+	 */
+	public boolean deleteUser(String username, String administratorUsername) {
+		if (username == null || administratorUsername == null ||
+				username.isBlank() || administratorUsername.isBlank()) return false;
+
+		String query = "DELETE FROM userDB WHERE userName = ? AND userName <> ? " +
+				"AND EXISTS (SELECT 1 FROM userDB AS administrator " +
+				"WHERE administrator.userName = ? AND administrator.adminRole = TRUE)";
+		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+			pstmt.setString(1, username);
+			pstmt.setString(2, administratorUsername);
+			pstmt.setString(3, administratorUsername);
+			return pstmt.executeUpdate() == 1;
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return false;
+		}
 	}
 
 /*******
