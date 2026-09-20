@@ -4,6 +4,7 @@ import database.Database;
 import javafx.collections.FXCollections;
 import javafx.geometry.Pos;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Alert;
 
 /*******
  * <p> Title: ControllerAddRemoveRoles Class. </p>
@@ -243,6 +244,20 @@ public class ControllerAddRemoveRoles {
 		
 		// If the selection is the list header (e.g., "<Select a role>") don't do anything
 		if (ViewAddRemoveRoles.theRemoveRole.compareTo("<Select a role>") != 0) {
+			
+			
+			// Prevent an administrator from removing their own Admin role
+		    if (ViewAddRemoveRoles.theSelectedUser.equals(ViewAddRemoveRoles.theUser.getUserName())
+		            && ViewAddRemoveRoles.theRemoveRole.equals("Admin")) {
+
+		    	Alert alert = new Alert(Alert.AlertType.ERROR);
+		    	alert.setTitle("Operation Not Allowed");
+		    	alert.setHeaderText(null);
+		    	alert.setContentText("An administrator cannot remove their own Admin role.");
+		    	alert.showAndWait();
+		    	
+		        return;
+		    }
 			
 			// If an actual role was selected, update the database entry for that user for the role
 			if (theDatabase.updateUserRole(ViewAddRemoveRoles.theSelectedUser, 
