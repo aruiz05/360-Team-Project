@@ -123,8 +123,6 @@ public class ControllerAddRemoveRoles {
 	 * 
 	 */
 	private static void setupSelectedUser() {
-		System.out.println("*** Entering setupSelectedUser");
-		
 		// Create the list of roles that could be added for the currently selected user (e.g., Do
 		// not show a role to add that the user already has!)
 		ViewAddRemoveRoles.addList.clear();
@@ -244,21 +242,21 @@ public class ControllerAddRemoveRoles {
 		
 		// If the selection is the list header (e.g., "<Select a role>") don't do anything
 		if (ViewAddRemoveRoles.theRemoveRole.compareTo("<Select a role>") != 0) {
-			
-			
-			// Prevent an administrator from removing their own Admin role
-		    if (ViewAddRemoveRoles.theSelectedUser.equals(ViewAddRemoveRoles.theUser.getUserName())
-		            && ViewAddRemoveRoles.theRemoveRole.equals("Admin")) {
 
-		    	Alert alert = new Alert(Alert.AlertType.ERROR);
-		    	alert.setTitle("Operation Not Allowed");
-		    	alert.setHeaderText(null);
-		    	alert.setContentText("An administrator cannot remove their own Admin role.");
-		    	alert.showAndWait();
-		    	
-		        return;
-		    }
-			
+			// Prevent an administrator from removing their own Admin role
+			if (RoleAssignmentValidator.isRemovingOwnAdminRole(ViewAddRemoveRoles.theSelectedUser,
+					ViewAddRemoveRoles.theUser.getUserName(), ViewAddRemoveRoles.theRemoveRole)) {
+				showRoleError("An administrator cannot remove their own Admin role.");
+				return;
+			}
+
+			// Every account must retain at least one role so it has a valid destination after login
+			if (RoleAssignmentValidator.isLastAssignedRole(theDatabase.getCurrentAdminRole(),
+					theDatabase.getCurrentNewRole1(), theDatabase.getCurrentNewRole2())) {
+				showRoleError("A user must have at least one assigned role.");
+				return;
+			}
+
 			// If an actual role was selected, update the database entry for that user for the role
 			if (theDatabase.updateUserRole(ViewAddRemoveRoles.theSelectedUser, 
 					ViewAddRemoveRoles.theRemoveRole, "false") ) {
@@ -270,6 +268,15 @@ public class ControllerAddRemoveRoles {
 				setupSelectedUser();
 			}				
 		}
+	}
+
+	// Display a useful explanation when a role removal is not permitted
+	private static void showRoleError(String message) {
+		Alert alert = new Alert(Alert.AlertType.ERROR);
+		alert.setTitle("Operation Not Allowed");
+		alert.setHeaderText(null);
+		alert.setContentText(message);
+		alert.showAndWait();
 	}
 	
 	
