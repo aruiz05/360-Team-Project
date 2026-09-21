@@ -267,6 +267,34 @@ public class Database {
 		return userList;
 	}
 
+	/*******
+	 * <p> Method: deleteUser(String username, String administratorUsername) </p>
+	 *
+	 * <p> Description: Remove an account only when the acting user still has the Admin role
+	 * and is not removing their own account.  Both checks are part of the deletion statement.</p>
+	 *
+	 * @param username specifies the account to be removed
+	 * @param administratorUsername specifies the signed-in administrator
+	 * @return true when one account was removed, else false
+	 */
+	public boolean deleteUser(String username, String administratorUsername) {
+		if (username == null || administratorUsername == null ||
+				username.isBlank() || administratorUsername.isBlank()) return false;
+
+		String query = "DELETE FROM userDB WHERE userName = ? AND userName <> ? " +
+				"AND EXISTS (SELECT 1 FROM userDB AS administrator " +
+				"WHERE administrator.userName = ? AND administrator.adminRole = TRUE)";
+		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+			pstmt.setString(1, username);
+			pstmt.setString(2, administratorUsername);
+			pstmt.setString(3, administratorUsername);
+			return pstmt.executeUpdate() == 1;
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return false;
+		}
+	}
+
 /*******
  * <p> Method: boolean loginAdmin(User user) </p>
  * 

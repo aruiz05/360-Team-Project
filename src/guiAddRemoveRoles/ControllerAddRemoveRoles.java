@@ -59,6 +59,7 @@ public class ControllerAddRemoveRoles {
 	protected static void doSelectUser() {
 		ViewAddRemoveRoles.theSelectedUser = 
 				(String) ViewAddRemoveRoles.combobox_SelectUser.getValue();
+		if (ViewAddRemoveRoles.theSelectedUser == null) return;
 		theDatabase.getUserAccountDetails(ViewAddRemoveRoles.theSelectedUser);
 		setupSelectedUser();
 	}

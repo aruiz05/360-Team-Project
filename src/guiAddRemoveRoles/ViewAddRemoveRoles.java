@@ -141,6 +141,11 @@ public class ViewAddRemoveRoles {
 		// singleton instance of this class
 		if (theView == null) theView = new ViewAddRemoveRoles();
 		
+		// Reload the accounts so recently deleted users cannot be selected
+		List<String> userList = theDatabase.getUserList();
+		if (userList != null)
+			combobox_SelectUser.setItems(FXCollections.observableArrayList(userList));
+
 		// Default to no user selected
 		combobox_SelectUser.getSelectionModel().select(0);
 		

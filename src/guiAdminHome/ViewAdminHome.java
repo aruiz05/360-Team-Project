@@ -170,6 +170,8 @@ public class ViewAdminHome {
 		// Populate the dynamic aspects of the GUI with the data from the user and the current
 		// state of the system.
 		theDatabase.getUserAccountDetails(user.getUserName());		// Fetch this user's data
+		label_UserDetails.setText("User: " + user.getUserName());
+		label_NumberOfUsers.setText("Number of users: " + theDatabase.getNumberOfUsers());
 		applicationMain.FoundationsMain.activeHomePage = theRole;	// Set this as the active Home																	// UserUpdate page
 
 		// Set the role for potential users to the default (No role selected)
