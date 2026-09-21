@@ -45,6 +45,7 @@ public class Database {
 	static final String PASS = ""; 
 
 	//  Shared variables used within this class
+	private final String databaseURL;			// Database URL used by this instance
 	private Connection connection = null;		// Singleton to access the database 
 	private Statement statement = null;			// The H2 Statement is used to construct queries
 	
@@ -69,7 +70,19 @@ public class Database {
 	 */
 	
 	public Database () {
-		
+		databaseURL = DB_URL;
+	}
+
+	/*******
+	 * <p> Method: Database(String url) </p>
+	 *
+	 * <p> Description: Package-protected constructor used by automated database tests so the
+	 * application database is not changed while tests are running.</p>
+	 *
+	 * @param url specifies the H2 database URL used by the test
+	 */
+	Database(String url) {
+		databaseURL = url;
 	}
 	
 	
@@ -85,7 +98,7 @@ public class Database {
 	public void connectToDatabase() throws SQLException {
 		try {
 			Class.forName(JDBC_DRIVER); // Load the JDBC driver
-			connection = DriverManager.getConnection(DB_URL, USER, PASS);
+			connection = DriverManager.getConnection(databaseURL, USER, PASS);
 			statement = connection.createStatement(); 
 			// You can use this command to clear the database and restart from fresh.
 			//statement.execute("DROP ALL OBJECTS");

@@ -231,20 +231,6 @@ public class ViewListUsers {
 
         List<User> users = ModelListUsers.getAllUsers();
 
-        System.out.println("Number of users returned: " +
-                (users == null ? "null" : users.size()));
-
-        if (users != null) {
-            for (User user : users) {
-                System.out.println(
-                        "User: " + user.getUserName()
-                        + " | " + user.getFirstName()
-                        + " " + user.getLastName()
-                        + " | " + user.getEmailAddress()
-                );
-            }
-        }
-
         if (users == null) {
             users = new ArrayList<User>();
         }
