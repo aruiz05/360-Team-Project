@@ -107,15 +107,12 @@ public class ControllerAdminHome {
 	 * 
 	 * Title: setOnetimePassword () Method. </p>
 	 * 
-	 * <p> Description: Protected method that is currently a stub informing the user that
-	 * this function has not yet been implemented. </p>
+	 * <p> Description: Protected method that displays the page used by an administrator to
+	 * establish a one-time password for an existing user. </p>
 	 */
 	protected static void setOnetimePassword () {
-		System.out.println("\n*** WARNING ***: One-Time Password Not Yet Implemented");
-		ViewAdminHome.alertNotImplemented.setTitle("*** WARNING ***");
-		ViewAdminHome.alertNotImplemented.setHeaderText("One-Time Password Issue");
-		ViewAdminHome.alertNotImplemented.setContentText("One-Time Password Not Yet Implemented");
-		ViewAdminHome.alertNotImplemented.showAndWait();
+		guiOneTimePassword.ViewOneTimePassword.displayOneTimePassword(ViewAdminHome.theStage,
+				ViewAdminHome.theUser);
 	}
 	
 	/**********

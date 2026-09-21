@@ -45,6 +45,7 @@ public class Database {
 	static final String PASS = ""; 
 
 	//  Shared variables used within this class
+	private final String databaseURL;			// Database URL used by this instance
 	private Connection connection = null;		// Singleton to access the database 
 	private Statement statement = null;			// The H2 Statement is used to construct queries
 	
@@ -69,7 +70,19 @@ public class Database {
 	 */
 	
 	public Database () {
-		
+		databaseURL = DB_URL;
+	}
+
+	/*******
+	 * <p> Method: Database(String url) </p>
+	 *
+	 * <p> Description: Package-protected constructor used by automated database tests so the
+	 * application database is not changed while tests are running.</p>
+	 *
+	 * @param url specifies the H2 database URL used by the test
+	 */
+	Database(String url) {
+		databaseURL = url;
 	}
 	
 	
@@ -85,7 +98,7 @@ public class Database {
 	public void connectToDatabase() throws SQLException {
 		try {
 			Class.forName(JDBC_DRIVER); // Load the JDBC driver
-			connection = DriverManager.getConnection(DB_URL, USER, PASS);
+			connection = DriverManager.getConnection(databaseURL, USER, PASS);
 			statement = connection.createStatement(); 
 			// You can use this command to clear the database and restart from fresh.
 			//statement.execute("DROP ALL OBJECTS");
@@ -116,8 +129,17 @@ public class Database {
 				+ "emailAddress VARCHAR(255), "
 				+ "adminRole BOOL DEFAULT FALSE, "
 				+ "newRole1 BOOL DEFAULT FALSE, "
-				+ "newRole2 BOOL DEFAULT FALSE)";
+				+ "newRole2 BOOL DEFAULT FALSE, "
+				+ "oneTimePassword VARCHAR(64), "
+				+ "passwordResetRequired BOOL DEFAULT FALSE)";
 		statement.execute(userTable);
+
+		// Existing databases must also receive the new one-time-password columns.  Adding the
+		// columns conditionally allows each team member to keep their current database.
+		statement.execute("ALTER TABLE userDB ADD COLUMN IF NOT EXISTS " +
+				"oneTimePassword VARCHAR(64)");
+		statement.execute("ALTER TABLE userDB ADD COLUMN IF NOT EXISTS " +
+				"passwordResetRequired BOOL DEFAULT FALSE");
 		
 		// Create the invitation codes table
 	    String invitationCodesTable = "CREATE TABLE IF NOT EXISTS InvitationCodes ("
@@ -259,7 +281,7 @@ public class Database {
 	public boolean loginAdmin(User user){
 		// Validates an admin user's login credentials so the user can login in as an Admin.
 		String query = "SELECT * FROM userDB WHERE userName = ? AND password = ? AND "
-				+ "adminRole = TRUE";
+				+ "adminRole = TRUE AND passwordResetRequired = FALSE";
 		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
 			pstmt.setString(1, user.getUserName());
 			pstmt.setString(2, user.getPassword());
@@ -286,7 +308,7 @@ public class Database {
 	public boolean loginRole1(User user) {
 		// Validates a student user's login credentials.
 		String query = "SELECT * FROM userDB WHERE userName = ? AND password = ? AND "
-				+ "newRole1 = TRUE";
+				+ "newRole1 = TRUE AND passwordResetRequired = FALSE";
 		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
 			pstmt.setString(1, user.getUserName());
 			pstmt.setString(2, user.getPassword());
@@ -312,7 +334,7 @@ public class Database {
 	// Validates a reviewer user's login credentials.
 	public boolean loginRole2(User user) {
 		String query = "SELECT * FROM userDB WHERE userName = ? AND password = ? AND "
-				+ "newRole2 = TRUE";
+				+ "newRole2 = TRUE AND passwordResetRequired = FALSE";
 		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
 			pstmt.setString(1, user.getUserName());
 			pstmt.setString(2, user.getPassword());
@@ -839,6 +861,110 @@ public class Database {
 	    }
 	}
 	
+
+	/*******
+	 * <p> Method: boolean setOneTimePassword(String username, String password) </p>
+	 *
+	 * <p> Description: Store a one-time password for an existing user and mark that account as
+	 * requiring a permanent password reset.  The user's current permanent password is not changed.
+	 * </p>
+	 *
+	 * @param username specifies the user whose one-time password is being established
+	 *
+	 * @param password specifies the validated one-time password
+	 *
+	 * @return true if exactly one account was updated, else false
+	 */
+	public boolean setOneTimePassword(String username, String password) {
+		String query = "UPDATE userDB SET oneTimePassword = ?, " +
+				"passwordResetRequired = TRUE WHERE userName = ?";
+		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+			pstmt.setString(1, password);
+			pstmt.setString(2, username);
+			return pstmt.executeUpdate() == 1;
+		} catch (SQLException e) {
+			return false;
+		}
+	}
+
+
+	/*******
+	 * <p> Method: boolean consumeOneTimePassword(String username, String password) </p>
+	 *
+	 * <p> Description: Check a one-time password and immediately clear it when it is correct.  The
+	 * reset-required state remains true until a valid permanent password is saved.  Performing the
+	 * comparison and clear in one update prevents a successful credential from being reused.</p>
+	 *
+	 * @param username specifies the user attempting to log in
+	 *
+	 * @param password specifies the submitted one-time password
+	 *
+	 * @return true if the one-time password was correct and was consumed, else false
+	 */
+	public boolean consumeOneTimePassword(String username, String password) {
+		String query = "UPDATE userDB SET oneTimePassword = NULL WHERE userName = ? AND " +
+				"oneTimePassword = ? AND passwordResetRequired = TRUE";
+		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+			pstmt.setString(1, username);
+			pstmt.setString(2, password);
+			return pstmt.executeUpdate() == 1;
+		} catch (SQLException e) {
+			return false;
+		}
+	}
+
+
+	/*******
+	 * <p> Method: boolean isPasswordResetRequired(String username) </p>
+	 *
+	 * <p> Description: Determine whether the specified user must establish a new permanent
+	 * password before normal login is permitted.</p>
+	 *
+	 * @param username specifies the user account being checked
+	 *
+	 * @return true if the account requires a password reset, else false
+	 */
+	public boolean isPasswordResetRequired(String username) {
+		String query = "SELECT passwordResetRequired FROM userDB WHERE userName = ?";
+		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+			pstmt.setString(1, username);
+			ResultSet rs = pstmt.executeQuery();
+			return rs.next() && rs.getBoolean("passwordResetRequired");
+		} catch (SQLException e) {
+			return false;
+		}
+	}
+
+
+	/*******
+	 * <p> Method: boolean completePasswordReset(String username, String password) </p>
+	 *
+	 * <p> Description: Save a validated permanent password, remove any one-time credential, and
+	 * clear the reset-required state.  All changes are performed by one database update so the
+	 * account cannot be left partially reset.</p>
+	 *
+	 * @param username specifies the user completing the forced reset
+	 *
+	 * @param password specifies the validated new permanent password
+	 *
+	 * @return true if exactly one account was updated, else false
+	 */
+	public boolean completePasswordReset(String username, String password) {
+		String query = "UPDATE userDB SET password = ?, oneTimePassword = NULL, " +
+				"passwordResetRequired = FALSE WHERE userName = ? AND " +
+				"passwordResetRequired = TRUE";
+		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+			pstmt.setString(1, password);
+			pstmt.setString(2, username);
+			boolean success = pstmt.executeUpdate() == 1;
+			if (success && username.equals(currentUsername))
+				currentPassword = password;
+			return success;
+		} catch (SQLException e) {
+			return false;
+		}
+	}
+
 	
 	/*******
 	 * <p> Method: boolean updateUserRole(String username, String role, String value) </p>
