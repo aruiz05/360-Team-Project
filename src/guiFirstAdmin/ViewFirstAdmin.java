@@ -143,9 +143,11 @@ public class ViewFirstAdmin {
 		// Create the Pane for the list of widgets and the Scene for the window
 		theRootPane = new Pane();
 		theFirstAdminScene = new Scene(theRootPane, width, height);
+		guiTools.ASUTheme.apply(theFirstAdminScene);
 
 		// Label theScene with the name of the system startup screen
 		setupLabelUI(label_ApplicationTitle, "Arial", 32, width, Pos.CENTER, 0, 10);
+		guiTools.ASUTheme.stylePageTitle(label_ApplicationTitle);
 
 		// Label to display the welcome message for the first user
 		setupLabelUI(label_TitleLine1, "Arial", 24, width, Pos.CENTER, 0, 70);

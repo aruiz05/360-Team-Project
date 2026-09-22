@@ -213,6 +213,7 @@ public class ViewUserUpdate {
 		// Create the Pane for the list of widgets and the Scene for the window
 		theRootPane = new Pane();
 		theUserUpdateScene = new Scene(theRootPane, width, height);
+		guiTools.ASUTheme.apply(theUserUpdateScene);
 
 		// Initialize the pop-up dialogs to an empty text filed.
 		dialogUpdateFirstName = new TextInputDialog("");
@@ -239,6 +240,7 @@ public class ViewUserUpdate {
 
 		// Label theScene with the name of the startup screen, centered at the top of the pane
 		setupLabelUI(label_ApplicationTitle, "Arial", 28, width, Pos.CENTER, 0, 5);
+		guiTools.ASUTheme.stylePageTitle(label_ApplicationTitle);
 
         // Label to display the welcome message for the first theUser
         setupLabelUI(label_Purpose, "Arial", 20, width, Pos.CENTER, 0, 50);

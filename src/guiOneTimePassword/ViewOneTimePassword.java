@@ -106,8 +106,10 @@ public class ViewOneTimePassword {
 	private ViewOneTimePassword() {
 		theRootPane = new Pane();
 		theOneTimePasswordScene = new Scene(theRootPane, width, height);
+		guiTools.ASUTheme.apply(theOneTimePasswordScene);
 
 		setupLabelUI(label_PageTitle, "Arial", 28, width, Pos.CENTER, 0, 5);
+		guiTools.ASUTheme.stylePageTitle(label_PageTitle);
 		setupLabelUI(label_UserDetails, "Arial", 20, width, Pos.BASELINE_LEFT, 20, 55);
 
 		setupLabelUI(label_SelectUser, "Arial", 18, 220, Pos.BASELINE_RIGHT, 20, 125);

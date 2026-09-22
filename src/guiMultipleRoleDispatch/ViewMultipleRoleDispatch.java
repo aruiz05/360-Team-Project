@@ -142,11 +142,13 @@ public class ViewMultipleRoleDispatch {
 		// Create the Pane for the list of widgets and the Scene for the window
 		theRootPane = new Pane();
 		theMultipleRoleDispatchScene = new Scene(theRootPane, width, height);
+		guiTools.ASUTheme.apply(theMultipleRoleDispatchScene);
 
 		// Populate the window with the title and other common widgets and set their static state
 		
 		// GUI Area 1
 		setupLabelUI(label_PageTitle, "Arial", 28, width, Pos.CENTER, 0, 5);
+		guiTools.ASUTheme.stylePageTitle(label_PageTitle);
 
 		// GUI Area 2
 		setupLabelUI(label_WhichRole, "Arial", 20, 200, Pos.BASELINE_LEFT, 20, 110);

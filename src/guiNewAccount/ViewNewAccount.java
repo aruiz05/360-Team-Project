@@ -159,12 +159,14 @@ public class ViewNewAccount {
 		// Create the Pane for the list of widgets and the Scene for the window
 		theRootPane = new Pane();
 		theNewAccountScene = new Scene(theRootPane, width, height);
+		guiTools.ASUTheme.apply(theNewAccountScene);
 
 		// Label the Panle with the name of the startup screen, centered at the top of the pane
 		setupLabelUI(label_ApplicationTitle, "Arial", 28, width, Pos.CENTER, 0, 5);
 		
     	// Label to display the welcome message for the new user
     	setupLabelUI(label_NewUserCreation, "Arial", 32, width, Pos.CENTER, 0, 10);
+		guiTools.ASUTheme.stylePageTitle(label_NewUserCreation);
 	
     	// Label to display the  message for the first user
     	setupLabelUI(label_NewUserLine, "Arial", 24, width, Pos.CENTER, 0, 70);

@@ -148,6 +148,7 @@ public class ViewRole1Home {
 		// Create the Pane for the list of widgets and the Scene for the window
 		theRootPane = new Pane();
 		theViewRole1HomeScene = new Scene(theRootPane, width, height);	// Create the scene
+		guiTools.ASUTheme.apply(theViewRole1HomeScene);
 		
 		// Set the title for the window
 		
@@ -156,6 +157,7 @@ public class ViewRole1Home {
 		// GUI Area 1
 		label_PageTitle.setText("Role1 Home Page");
 		setupLabelUI(label_PageTitle, "Arial", 28, width, Pos.CENTER, 0, 5);
+		guiTools.ASUTheme.stylePageTitle(label_PageTitle);
 
 		label_UserDetails.setText("User: " + theUser.getUserName());
 		setupLabelUI(label_UserDetails, "Arial", 20, width, Pos.BASELINE_LEFT, 20, 55);
