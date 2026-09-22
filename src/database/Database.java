@@ -1058,52 +1058,56 @@ public class Database {
 	 */
 	// Update a users role
 	public boolean updateUserRole(String username, String role, String value) {
-		if (role.compareTo("Admin") == 0) {
-			String query = "UPDATE userDB SET adminRole = ? WHERE username = ?";
-			try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-				pstmt.setString(1, value);
-				pstmt.setString(2, username);
-				pstmt.executeUpdate();
-				if (value.compareTo("true") == 0)
-					currentAdminRole = true;
-				else
-					currentAdminRole = false;
-				return true;
-			} catch (SQLException e) {
-				return false;
-			}
+		if (username == null || username.isBlank() || role == null || value == null ||
+				(!value.equals("true") && !value.equals("false"))) return false;
+
+		String column;
+		if (role.equals("Admin")) column = "adminRole";
+		else if (role.equals("Role1")) column = "newRole1";
+		else if (role.equals("Role2")) column = "newRole2";
+		else return false;
+
+		boolean roleValue = Boolean.parseBoolean(value);
+		if (!roleValue && getUserRoleCount(username) <= 1) return false;
+
+		String query = "UPDATE userDB SET " + column + " = ? WHERE username = ?";
+		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+			pstmt.setBoolean(1, roleValue);
+			pstmt.setString(2, username);
+			if (pstmt.executeUpdate() != 1) return false;
+
+			if (role.equals("Admin")) currentAdminRole = roleValue;
+			else if (role.equals("Role1")) currentNewRole1 = roleValue;
+			else currentNewRole2 = roleValue;
+			return true;
+		} catch (SQLException e) {
+			return false;
 		}
-		if (role.compareTo("Role1") == 0) {
-			String query = "UPDATE userDB SET newRole1 = ? WHERE username = ?";
-			try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-				pstmt.setString(1, value);
-				pstmt.setString(2, username);
-				pstmt.executeUpdate();
-				if (value.compareTo("true") == 0)
-					currentNewRole1 = true;
-				else
-					currentNewRole1 = false;
-				return true;
-			} catch (SQLException e) {
-				return false;
-			}
+	}
+
+	/*******
+	 * <p> Method: int getUserRoleCount(String username) </p>
+	 *
+	 * <p> Description: Counts the roles assigned to an account before a role is removed.</p>
+	 *
+	 * @param username specifies the account to inspect
+	 * @return the number of assigned roles, or -1 if the account cannot be found
+	 */
+	private int getUserRoleCount(String username) {
+		String query = "SELECT adminRole, newRole1, newRole2 FROM userDB WHERE username = ?";
+		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+			pstmt.setString(1, username);
+			ResultSet rs = pstmt.executeQuery();
+			if (!rs.next()) return -1;
+
+			int count = 0;
+			if (rs.getBoolean("adminRole")) count++;
+			if (rs.getBoolean("newRole1")) count++;
+			if (rs.getBoolean("newRole2")) count++;
+			return count;
+		} catch (SQLException e) {
+			return -1;
 		}
-		if (role.compareTo("Role2") == 0) {
-			String query = "UPDATE userDB SET newRole2 = ? WHERE username = ?";
-			try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-				pstmt.setString(1, value);
-				pstmt.setString(2, username);
-				pstmt.executeUpdate();
-				if (value.compareTo("true") == 0)
-					currentNewRole2 = true;
-				else
-					currentNewRole2 = false;
-				return true;
-			} catch (SQLException e) {
-				return false;
-			}
-		}
-		return false;
 	}
 	
 	
