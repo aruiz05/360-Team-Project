@@ -95,8 +95,10 @@ public class ViewPasswordReset {
 	private ViewPasswordReset() {
 		theRootPane = new Pane();
 		thePasswordResetScene = new Scene(theRootPane, width, height);
+		guiTools.ASUTheme.apply(thePasswordResetScene);
 
 		setupLabelUI(label_PageTitle, "Arial", 28, width, Pos.CENTER, 0, 5);
+		guiTools.ASUTheme.stylePageTitle(label_PageTitle);
 		setupLabelUI(label_Instructions, "Arial", 17, width-40, Pos.CENTER, 20, 55);
 		label_Instructions.setWrapText(true);
 

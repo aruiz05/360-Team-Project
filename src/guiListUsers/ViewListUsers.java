@@ -101,6 +101,7 @@ public class ViewListUsers {
 
         theListUsersScene =
                 new Scene(theRootPane, width, height);
+        guiTools.ASUTheme.apply(theListUsersScene);
 
         /*
          * Page title
@@ -110,6 +111,7 @@ public class ViewListUsers {
         label_PageTitle.setAlignment(Pos.CENTER);
         label_PageTitle.setLayoutX(0);
         label_PageTitle.setLayoutY(10);
+        guiTools.ASUTheme.stylePageTitle(label_PageTitle);
 
         /*
          * Description

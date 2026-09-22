@@ -121,9 +121,11 @@ public class ViewUserLogin {
 		// Create the Pane for the list of widgets and the Scene for the window
 		theRootPane = new Pane();
 		theUserLoginScene = new Scene(theRootPane, width, height);
+		guiTools.ASUTheme.apply(theUserLoginScene);
 		
 		// Populate the window with the title and other common widgets and set their static state
 		setupLabelUI(label_ApplicationTitle, "Arial", 32, width, Pos.CENTER, 0, 10);
+		guiTools.ASUTheme.stylePageTitle(label_ApplicationTitle);
 
 		setupLabelUI(label_OperationalStartTitle, "Arial", 24, width, Pos.CENTER, 0, 60);
 

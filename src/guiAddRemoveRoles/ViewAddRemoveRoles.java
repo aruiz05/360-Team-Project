@@ -177,12 +177,14 @@ public class ViewAddRemoveRoles {
 		// Create the Pane for the list of widgets and the Scene for the window
 		theRootPane = new Pane();
 		theAddRemoveRolesScene = new Scene(theRootPane, width, height);
+		guiTools.ASUTheme.apply(theAddRemoveRolesScene);
 		
 		// Populate the window with the title and other common widgets and set their static state
 		
 		// GUI Area 1
 		label_PageTitle.setText("Add/Remove Roles Page");
 		setupLabelUI(label_PageTitle, "Arial", 28, width, Pos.CENTER, 0, 5);
+		guiTools.ASUTheme.stylePageTitle(label_PageTitle);
 
 		label_UserDetails.setText("User: " + theUser.getUserName());
 		setupLabelUI(label_UserDetails, "Arial", 20, width, Pos.BASELINE_LEFT, 20, 55);

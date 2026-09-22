@@ -1,1 +1,142 @@
-/* JavaFX CSS - Leave this comment until you have at least create one rule which uses -fx-Property */
+/* ASU-inspired visual theme for the Lessons Learned System */
+
+.root {
+	-fx-background-color: #f4f4f4;
+	-fx-font-family: "Arial";
+	-fx-font-size: 14px;
+}
+
+.page-title {
+	-fx-background-color: #8c1d40;
+	-fx-text-fill: white;
+	-fx-font-weight: bold;
+	-fx-padding: 3px 20px 4px 20px;
+	-fx-border-color: transparent transparent #ffc627 transparent;
+	-fx-border-width: 0 0 4px 0;
+}
+
+.section-title {
+	-fx-text-fill: #8c1d40;
+	-fx-font-weight: bold;
+}
+
+.label {
+	-fx-text-fill: #191919;
+}
+
+.button {
+	-fx-background-color: #8c1d40;
+	-fx-text-fill: white;
+	-fx-font-weight: bold;
+	-fx-background-radius: 3px;
+	-fx-border-radius: 3px;
+	-fx-padding: 8px 16px;
+	-fx-cursor: hand;
+}
+
+.button:hover {
+	-fx-background-color: #6f1733;
+}
+
+.button:pressed {
+	-fx-background-color: #541126;
+}
+
+.button:focused {
+	-fx-border-color: #ffc627;
+	-fx-border-width: 2px;
+}
+
+.secondary-button {
+	-fx-background-color: white;
+	-fx-text-fill: #8c1d40;
+	-fx-border-color: #8c1d40;
+	-fx-border-width: 1.5px;
+}
+
+.secondary-button:hover {
+	-fx-background-color: #f7e8ee;
+}
+
+.danger-button {
+	-fx-background-color: #b72a3a;
+}
+
+.danger-button:hover {
+	-fx-background-color: #941f2d;
+}
+
+.text-field,
+.password-field,
+.combo-box {
+	-fx-background-color: white;
+	-fx-border-color: #a9a9a9;
+	-fx-border-radius: 3px;
+	-fx-background-radius: 3px;
+	-fx-padding: 6px 8px;
+}
+
+.text-field:focused,
+.password-field:focused,
+.combo-box:focused {
+	-fx-border-color: #8c1d40;
+	-fx-border-width: 2px;
+}
+
+.combo-box .list-cell {
+	-fx-text-fill: #191919;
+}
+
+.table-view {
+	-fx-background-color: white;
+	-fx-border-color: #d0d0d0;
+	-fx-border-radius: 3px;
+}
+
+.table-view .column-header-background {
+	-fx-background-color: #8c1d40;
+}
+
+.table-view .column-header,
+.table-view .filler {
+	-fx-background-color: transparent;
+	-fx-border-color: transparent #a91f4d transparent transparent;
+}
+
+.table-view .column-header .label {
+	-fx-text-fill: white;
+	-fx-font-weight: bold;
+}
+
+.table-row-cell:odd {
+	-fx-background-color: #faf4f6;
+}
+
+.table-row-cell:selected {
+	-fx-background-color: #ffc627;
+}
+
+.table-row-cell:selected .text {
+	-fx-fill: #191919;
+}
+
+.check-box:selected .mark {
+	-fx-background-color: white;
+}
+
+.check-box:selected .box {
+	-fx-background-color: #8c1d40;
+}
+
+.alert.dialog-pane {
+	-fx-background-color: #f4f4f4;
+}
+
+.alert.dialog-pane .header-panel {
+	-fx-background-color: #8c1d40;
+}
+
+.alert.dialog-pane .header-panel .label {
+	-fx-text-fill: white;
+	-fx-font-weight: bold;
+}

@@ -95,8 +95,11 @@ public class ViewDeleteUser {
 	private ViewDeleteUser() {
 		theRootPane = new Pane();
 		theDeleteUserScene = new Scene(theRootPane, width, height);
+		guiTools.ASUTheme.apply(theDeleteUserScene);
 
 		setupLabelUI(label_PageTitle, 28, width, Pos.CENTER, 0, 5);
+		guiTools.ASUTheme.stylePageTitle(label_PageTitle);
+		guiTools.ASUTheme.styleDanger(button_DeleteUser);
 		setupLabelUI(label_UserDetails, 20, width, Pos.BASELINE_LEFT, 20, 55);
 		setupLabelUI(label_SelectUser, 20, 220, Pos.BASELINE_RIGHT, 20, 125);
 		combobox_SelectUser.setLayoutX(260);
