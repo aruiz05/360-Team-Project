@@ -45,6 +45,7 @@ public class Database {
 	static final String PASS = ""; 
 
 	//  Shared variables used within this class
+	private final String databaseURL;			// Database URL used by this instance
 	private Connection connection = null;		// Singleton to access the database 
 	private Statement statement = null;			// The H2 Statement is used to construct queries
 	
@@ -69,7 +70,19 @@ public class Database {
 	 */
 	
 	public Database () {
-		
+		databaseURL = DB_URL;
+	}
+
+	/*******
+	 * <p> Method: Database(String url) </p>
+	 *
+	 * <p> Description: Package-protected constructor used by automated database tests so the
+	 * application database is not changed while tests are running.</p>
+	 *
+	 * @param url specifies the H2 database URL used by the test
+	 */
+	Database(String url) {
+		databaseURL = url;
 	}
 	
 	
@@ -85,7 +98,7 @@ public class Database {
 	public void connectToDatabase() throws SQLException {
 		try {
 			Class.forName(JDBC_DRIVER); // Load the JDBC driver
-			connection = DriverManager.getConnection(DB_URL, USER, PASS);
+			connection = DriverManager.getConnection(databaseURL, USER, PASS);
 			statement = connection.createStatement(); 
 			// You can use this command to clear the database and restart from fresh.
 			//statement.execute("DROP ALL OBJECTS");
@@ -244,6 +257,53 @@ public class Database {
 //		System.out.println(userList);
 		return userList;
 	}
+	
+	/*******
+	 * <p> Method: List<User> getAllUsers() </p>
+	 *
+	 * <p> Description: Retrieves all user accounts from the database so an
+	 * administrator can view the username, name, email address, and assigned
+	 * roles for each user.</p>
+	 *
+	 * @return a list containing all users currently stored in the database.
+	 */
+	public List<User> getAllUsers() {
+
+	    List<User> users = new ArrayList<User>();
+
+	    String query = "SELECT userName, firstName, middleName, lastName, "
+	            + "preferredFirstName, emailAddress, adminRole, newRole1, newRole2 "
+	            + "FROM userDB ORDER BY userName";
+
+	    try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+
+	        ResultSet rs = pstmt.executeQuery();
+
+	        while (rs.next()) {
+
+	            User user = new User(
+	                    rs.getString("userName"),
+	                    "",     // Password is intentionally not needed for this screen
+	                    rs.getString("firstName"),
+	                    rs.getString("middleName"),
+	                    rs.getString("lastName"),
+	                    rs.getString("preferredFirstName"),
+	                    rs.getString("emailAddress"),
+	                    rs.getBoolean("adminRole"),
+	                    rs.getBoolean("newRole1"),
+	                    rs.getBoolean("newRole2")
+	            );
+
+	            users.add(user);
+	        }
+
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	    }
+
+	    return users;
+	}
+	
 
 /*******
  * <p> Method: boolean loginAdmin(User user) </p>
