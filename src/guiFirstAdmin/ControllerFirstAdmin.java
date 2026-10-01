@@ -101,7 +101,11 @@ public class ControllerFirstAdmin {
 	 * <p> Description: This method is called when the user presses the button to set up the Admin
 	 * account.  It start by trying to establish a new user and placing that user into the
 	 * database.  If that is successful, we proceed to the UserUpdate page.</p>
-	 * 
+	 *
+	 * @param ps specifies the JavaFX Stage used by the application
+	 *
+	 * @param r specifies the role value used when creating the administrator
+	 *
 	 */
 	protected static void doSetupAdmin(Stage ps, int r) {
 		
@@ -158,4 +162,3 @@ public class ControllerFirstAdmin {
 		System.exit(0);
 	}	
 }
-

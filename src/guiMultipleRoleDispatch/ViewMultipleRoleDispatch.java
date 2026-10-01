@@ -132,10 +132,6 @@ public class ViewMultipleRoleDispatch {
 	 * This method determines the location, size, font, color, and change and event handlers for
 	 * each GUI object. </p>
 	 * 
-	 * @param ps specifies the JavaFX Stage to be used for this GUI and it's methods
-	 * 
-	 * @param user specifies the User for this GUI and it's methods
-	 * 
 	 */
 	private ViewMultipleRoleDispatch() {
 

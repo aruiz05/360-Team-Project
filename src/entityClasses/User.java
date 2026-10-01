@@ -49,7 +49,17 @@ public class User {
      * @param userName specifies the account userName for this user
      * 
      * @param password specifies the account password for this user
-     * 
+     *
+     * @param fn specifies the first name for this user
+     *
+     * @param mn specifies the middle name for this user
+     *
+     * @param ln specifies the last name for this user
+     *
+     * @param pfn specifies the preferred first name for this user
+     *
+     * @param ea specifies the email address for this user
+     *
      * @param r1 specifies the the Admin attribute (TRUE or FALSE) for this user
      * 
      * @param r2 specifies the the Student attribute (TRUE or FALSE) for this user

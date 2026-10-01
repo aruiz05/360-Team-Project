@@ -60,8 +60,10 @@ public class ControllerUserLogin {
 	 * 
 	 * The method reaches batch to the view page and to fetch the information needed rather than
 	 * passing that information as parameters.
-	 * 
-	 */	
+	 *
+	 * @param ts specifies the JavaFX Stage used by the login page
+	 *
+	 */
 	protected static void doLogin(Stage ts) {
 		theStage = ts;
 		String username = ViewUserLogin.text_Username.getText();
@@ -162,11 +164,15 @@ public class ControllerUserLogin {
 	
 		
 	/**********
-	 * <p> Method: setup() </p>
+	 * <p> Method: doSetupAccount(Stage theStage, String invitationCode) </p>
 	 * 
 	 * <p> Description: This method is called to reset the page and then populate it with new
 	 * content for the new user.</p>
-	 * 
+	 *
+	 * @param theStage specifies the JavaFX Stage used by the account setup page
+	 *
+	 * @param invitationCode specifies the invitation code used to create the account
+	 *
 	 */
 	protected static void doSetupAccount(Stage theStage, String invitationCode) {
 		guiNewAccount.ViewNewAccount.displayNewAccount(theStage, invitationCode);

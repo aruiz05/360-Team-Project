@@ -166,6 +166,8 @@ public class ControllerAdminHome {
 	 * if a properly email address is active.</p>
 	 * 
 	 * @param emailAddress	This String holds what is expected to be an email address
+	 *
+	 * @return true when the email address is invalid, otherwise false
 	 */
 	protected static boolean invalidEmailAddress(String emailAddress) {
 		if (emailAddress.length() == 0) {

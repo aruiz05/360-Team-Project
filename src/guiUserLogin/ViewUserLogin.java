@@ -109,12 +109,6 @@ public class ViewUserLogin {
 	 * and for potential new users to provide an invitation code and if it is valid, they are taken
 	 * to a page where they can specify a username and password.</p>
 	 * 
-	 * @param ps specifies the JavaFX Stage to be used for this GUI and it's methods
-	 * 
-	 * @param theRoot specifies the JavaFX Pane to be used for this GUI and it's methods
-	 * 
-	 * @param db specifies the Database to be used by this GUI and it's methods
-	 * 
 	 */
 	private ViewUserLogin() {
 

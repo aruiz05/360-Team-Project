@@ -115,6 +115,8 @@ public class Database {
  * 
  * <p> Description: Used to create new instances of the two database tables used by this class.</p>
  * 
+ * @throws SQLException if the database tables cannot be created
+ *
  */
 	private void createTables() throws SQLException {
 		// Create the user database
@@ -247,7 +249,7 @@ public class Database {
  *  <p> Method: List getUserList() </p>
  *  
  *  <P> Description: Generate an List of Strings, one for each user in the database,
- *  starting with "<Select User>" at the start of the list. </p>
+ *  starting with {@code <Select User>} at the start of the list. </p>
  *  
  *  @return a list of userNames found in the database.
  */
@@ -268,7 +270,7 @@ public class Database {
 	}
 	
 	/*******
-	 * <p> Method: List<User> getAllUsers() </p>
+	 * <p> Method: List&lt;User&gt; getAllUsers() </p>
 	 *
 	 * <p> Description: Retrieves all user accounts from the database so an
 	 * administrator can view the username, name, email address, and assigned
