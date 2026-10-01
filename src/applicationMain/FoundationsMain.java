@@ -24,7 +24,7 @@ import javafx.scene.control.Alert.AlertType;
  *             sometimes frustrating, if not painful, experimentation until you get it working.
  *             This is especially true when the obvious way to do something does not work!</p>
  *
- * <p> On startup, the application tries to connect with the Foundations in-memory database.  If a
+ * <p> On startup, the application tries to connect with the Foundations persistent database.  If a
  * connection to the database is currently active, an alert is displayed explaining the situation
  * to the users and the application quits when the user acknowledges the alert.</p>
  *
@@ -82,7 +82,7 @@ public class FoundationsMain extends Application {
 	@Override
 	public void start(Stage theStage) {
 		
-		// Connect to the in-memory database
+		// Connect to the persistent Foundations database
 		try {
 			// Connect to the database
 			database.connectToDatabase();

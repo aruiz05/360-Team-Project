@@ -24,6 +24,7 @@ import entityClasses.User;
  * @author Lynn Robert Carter
  * 
  * @version 1.00		2025-08-20 Initial version
+ * @version 2.00        2026-10-01 Added the HW2 contributor lesson-management entry point
  *  
  */
 
@@ -48,6 +49,7 @@ public class ViewRole1Home {
 	protected static Label label_PageTitle = new Label();
 	protected static Label label_UserDetails = new Label();
 	protected static Button button_UpdateThisUser = new Button("Account Update");
+	protected static Button button_ManageLessons = new Button("Manage My Lessons");
 	
 	// This is a separator and it is used to partition the GUI for various tasks
 	protected static Line line_Separator1 = new Line(20, 95, width-20, 95);
@@ -127,7 +129,7 @@ public class ViewRole1Home {
 		label_UserDetails.setText("User: " + theUser.getUserName());
 				
 		// Set the title for the window, display the page, and wait for the Admin to do something
-		theStage.setTitle("CSE 360 Foundations: Role1 Home Page");
+		theStage.setTitle("HW2: Contributor Home Page");
 		theStage.setScene(theViewRole1HomeScene);
 		theStage.show();
 	}
@@ -155,7 +157,7 @@ public class ViewRole1Home {
 		// Populate the window with the title and other common widgets and set their static state
 		
 		// GUI Area 1
-		label_PageTitle.setText("Role1 Home Page");
+		label_PageTitle.setText("Contributor Home Page");
 		setupLabelUI(label_PageTitle, "Arial", 28, width, Pos.CENTER, 0, 5);
 		guiTools.ASUTheme.stylePageTitle(label_PageTitle);
 
@@ -165,9 +167,11 @@ public class ViewRole1Home {
 		setupButtonUI(button_UpdateThisUser, "Dialog", 18, 170, Pos.CENTER, 610, 45);
 		button_UpdateThisUser.setOnAction((_) -> {ControllerRole1Home.performUpdate(); });
 		
-		// GUI Area 2
-		
-			// This is a stub, so this area is empty
+		// GUI Area 2: Phase Two contributor lesson management
+		setupButtonUI(button_ManageLessons, "Dialog", 18, 260, Pos.CENTER, 270, 165);
+		button_ManageLessons.setOnAction((_) -> {
+			ControllerRole1Home.performManageLessons();
+		});
 		
 		
 		// GUI Area 3
@@ -182,6 +186,7 @@ public class ViewRole1Home {
 		// Place all of the widget items into the Root Pane's list of children
          theRootPane.getChildren().addAll(
 			label_PageTitle, label_UserDetails, button_UpdateThisUser, line_Separator1,
+			button_ManageLessons,
 	        line_Separator4, button_Logout, button_Quit);
 }
 	

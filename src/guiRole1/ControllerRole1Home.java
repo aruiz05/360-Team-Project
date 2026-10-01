@@ -19,6 +19,7 @@ package guiRole1;
  * 
  * @version 1.00		2025-08-17 Initial version
  * @version 1.01		2025-09-16 Update Javadoc documentation *  
+ * @version 2.00        2026-10-01 Added navigation to contributor lesson management
  */
 
 public class ControllerRole1Home {
@@ -49,6 +50,15 @@ public class ControllerRole1Home {
 	protected static void performUpdate () {
 		guiUserUpdate.ViewUserUpdate.displayUserUpdate(ViewRole1Home.theStage, ViewRole1Home.theUser);
 	}	
+
+	/**********
+	 * <p> Method: performManageLessons() </p>
+	 *
+	 * <p> Description: Open the contributor's HW2 lesson collection.</p>
+	 */
+	protected static void performManageLessons() {
+		guiLessons.ViewLessons.displayLessons(ViewRole1Home.theStage, ViewRole1Home.theUser);
+	}
 
 	/**********
 	 * <p> Method: performLogout() </p>

@@ -9,12 +9,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import entityClasses.ExperienceRecord;
+import entityClasses.LessonLearned;
+import entityClasses.TeamMemberEffort;
 import entityClasses.User;
 
 /*******
  * <p> Title: Database Class. </p>
  * 
- * <p> Description: This is an in-memory database built on H2.  Detailed documentation of H2 can
+ * <p> Description: This is a persistent database built on H2.  Detailed documentation of H2 can
  * be found at https://www.h2database.com/html/main.html (Click on "PDF (2MB)" on the l3ft side
  * of the page under the heading "Reference" for a PDF of 438 pages.)  This class leverages H2
  * and provides numerous special supporting methods.
@@ -27,6 +30,7 @@ import entityClasses.User;
  * @version 2.00		2025-04-29 Updated and expanded from the version produce by Pravalika 
  * 							Mukkiri and Ishwarya Hidkimath Basavaraj
  * @version 2.01		2025-12-17 Minor updates for Spring 2026
+ * @version 3.00        2026-10-01 Added persistent HW2 lesson and experience CRUD
  */
 
 /*
@@ -89,8 +93,7 @@ public class Database {
 /*******
  * <p> Method: connectToDatabase </p>
  * 
- * <p> Description: Used to establish the in-memory instance of the H2 database from secondary
- *		storage.</p>
+ * <p> Description: Used to establish the H2 database connection to persistent storage.</p>
  *
  * @throws SQLException when the DriverManager is unable to establish a connection
  * 
@@ -149,6 +152,46 @@ public class Database {
 	    		+ "emailAddress VARCHAR(255), "
 	            + "role VARCHAR(10))";
 	    statement.execute(invitationCodesTable);
+
+		// HW2 lessons are stored in separate tables so the existing TP1 account data and behavior
+		// are not changed.  Lock state is persisted with each record even though curator controls
+		// are outside the HW2 scope.
+		String lessonsTable = "CREATE TABLE IF NOT EXISTS lessons ("
+				+ "id BIGINT AUTO_INCREMENT PRIMARY KEY, "
+				+ "lessonOwner VARCHAR(255) NOT NULL, "
+				+ "title VARCHAR(500) NOT NULL, "
+				+ "problemSituation CLOB NOT NULL, "
+				+ "lessonText CLOB NOT NULL, "
+				+ "lessonLocked BOOL DEFAULT FALSE, "
+				+ "titleLocked BOOL DEFAULT FALSE, "
+				+ "problemLocked BOOL DEFAULT FALSE, "
+				+ "lessonTextLocked BOOL DEFAULT FALSE, "
+				+ "hiddenRoleInformation CLOB)";
+		statement.execute(lessonsTable);
+
+		String experienceTable = "CREATE TABLE IF NOT EXISTS experienceRecords ("
+				+ "id BIGINT AUTO_INCREMENT PRIMARY KEY, "
+				+ "lessonId BIGINT NOT NULL, "
+				+ "recordOwner VARCHAR(255) NOT NULL, "
+				+ "whatWasDone CLOB NOT NULL, "
+				+ "howItWasDone CLOB NOT NULL, "
+				+ "elapsedMinutes DOUBLE NOT NULL, "
+				+ "experienceLocked BOOL DEFAULT FALSE, "
+				+ "whatLocked BOOL DEFAULT FALSE, "
+				+ "howLocked BOOL DEFAULT FALSE, "
+				+ "elapsedLocked BOOL DEFAULT FALSE, "
+				+ "effortLocked BOOL DEFAULT FALSE, "
+				+ "FOREIGN KEY (lessonId) REFERENCES lessons(id) ON DELETE CASCADE)";
+		statement.execute(experienceTable);
+
+		String effortTable = "CREATE TABLE IF NOT EXISTS experienceEfforts ("
+				+ "experienceId BIGINT NOT NULL, "
+				+ "entryOrder INT NOT NULL, "
+				+ "memberName VARCHAR(255) NOT NULL, "
+				+ "effortMinutes DOUBLE NOT NULL, "
+				+ "PRIMARY KEY (experienceId, entryOrder), "
+				+ "FOREIGN KEY (experienceId) REFERENCES experienceRecords(id) ON DELETE CASCADE)";
+		statement.execute(effortTable);
 	}
 
 
@@ -1222,6 +1265,412 @@ public class Database {
 	 *  
 	 */
 	public boolean getCurrentNewRole2() { return currentNewRole2;};
+
+
+	/*-*******************************************************************************************
+
+	HW2 lesson and experience persistence
+
+	**********************************************************************************************/
+
+	/*******
+	 * <p> Method: long createLesson(LessonLearned lesson) </p>
+	 *
+	 * <p> Description: Insert a validated lesson and return its database-generated identifier.</p>
+	 *
+	 * @param lesson specifies the validated lesson values
+	 * @return the generated lesson identifier
+	 * @throws SQLException when the lesson cannot be inserted
+	 */
+	public long createLesson(LessonLearned lesson) throws SQLException {
+		String query = "INSERT INTO lessons (lessonOwner, title, problemSituation, lessonText, " +
+				"lessonLocked, titleLocked, problemLocked, lessonTextLocked) " +
+				"VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+		try (PreparedStatement pstmt = connection.prepareStatement(query,
+				Statement.RETURN_GENERATED_KEYS)) {
+			pstmt.setString(1, lesson.getOwner());
+			pstmt.setString(2, lesson.getTitle());
+			pstmt.setString(3, lesson.getProblemSituation());
+			pstmt.setString(4, lesson.getLessonLearned());
+			pstmt.setBoolean(5, lesson.isLessonLocked());
+			pstmt.setBoolean(6, lesson.isTitleLocked());
+			pstmt.setBoolean(7, lesson.isProblemSituationLocked());
+			pstmt.setBoolean(8, lesson.isLessonLearnedLocked());
+			if (pstmt.executeUpdate() != 1)
+				throw new SQLException("The lesson was not inserted.");
+			try (ResultSet keys = pstmt.getGeneratedKeys()) {
+				if (keys.next()) return keys.getLong(1);
+			}
+		}
+		throw new SQLException("The lesson identifier was not generated.");
+	}
+
+	/*******
+	 * <p> Method: LessonLearned getLesson(long id) </p>
+	 *
+	 * @param id specifies the lesson identifier
+	 * @return the lesson, or null when it does not exist
+	 * @throws SQLException when the lesson cannot be read
+	 */
+	public LessonLearned getLesson(long id) throws SQLException {
+		String query = "SELECT id, lessonOwner, title, problemSituation, lessonText, " +
+				"lessonLocked, titleLocked, problemLocked, lessonTextLocked " +
+				"FROM lessons WHERE id = ?";
+		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+			pstmt.setLong(1, id);
+			try (ResultSet rs = pstmt.executeQuery()) {
+				if (rs.next()) return lessonFromResult(rs);
+			}
+		}
+		return null;
+	}
+
+	/*******
+	 * <p> Method: List&lt;LessonLearned&gt; getLessonsByOwner(String owner) </p>
+	 *
+	 * <p> Description: Read only the lessons owned by one contributor.  This ownership condition
+	 * is part of the SQL query so another contributor's content never enters the returned list.</p>
+	 *
+	 * @param owner specifies the contributor whose lessons are requested
+	 * @return all matching lessons ordered by identifier
+	 * @throws SQLException when the list cannot be read
+	 */
+	public List<LessonLearned> getLessonsByOwner(String owner) throws SQLException {
+		List<LessonLearned> lessons = new ArrayList<LessonLearned>();
+		String query = "SELECT id, lessonOwner, title, problemSituation, lessonText, " +
+				"lessonLocked, titleLocked, problemLocked, lessonTextLocked " +
+				"FROM lessons WHERE lessonOwner = ? ORDER BY id";
+		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+			pstmt.setString(1, owner);
+			try (ResultSet rs = pstmt.executeQuery()) {
+				while (rs.next()) lessons.add(lessonFromResult(rs));
+			}
+		}
+		return lessons;
+	}
+
+	/*******
+	 * <p> Method: boolean updateLesson(LessonLearned lesson) </p>
+	 *
+	 * @param lesson specifies the validated values and existing identifier
+	 * @return true when exactly one lesson was changed
+	 * @throws SQLException when the update cannot be completed
+	 */
+	public boolean updateLesson(LessonLearned lesson) throws SQLException {
+		String query = "UPDATE lessons SET title = ?, problemSituation = ?, lessonText = ? " +
+				"WHERE id = ? AND lessonOwner = ?";
+		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+			pstmt.setString(1, lesson.getTitle());
+			pstmt.setString(2, lesson.getProblemSituation());
+			pstmt.setString(3, lesson.getLessonLearned());
+			pstmt.setLong(4, lesson.getId());
+			pstmt.setString(5, lesson.getOwner());
+			return pstmt.executeUpdate() == 1;
+		}
+	}
+
+	/*******
+	 * <p> Method: boolean deleteLesson(long id) </p>
+	 *
+	 * <p> Description: Delete one lesson.  Database foreign keys delete only that lesson's
+	 * experience and effort rows in the same database transaction.</p>
+	 *
+	 * @param id specifies the lesson identifier
+	 * @return true when one lesson was removed
+	 * @throws SQLException when deletion cannot be completed
+	 */
+	public boolean deleteLesson(long id) throws SQLException {
+		String query = "DELETE FROM lessons WHERE id = ?";
+		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+			pstmt.setLong(1, id);
+			return pstmt.executeUpdate() == 1;
+		}
+	}
+
+	/*******
+	 * <p> Method: int getLessonCount() </p>
+	 *
+	 * @return the total number of stored lessons
+	 * @throws SQLException when the count cannot be read
+	 */
+	public int getLessonCount() throws SQLException {
+		try (ResultSet rs = statement.executeQuery("SELECT COUNT(*) FROM lessons")) {
+			return rs.next() ? rs.getInt(1) : 0;
+		}
+	}
+
+	/*******
+	 * <p> Method: long createExperience(ExperienceRecord experience) </p>
+	 *
+	 * <p> Description: Insert one validated experience and all team efforts atomically.  A
+	 * rollback prevents a partially saved experience if any effort row fails.</p>
+	 *
+	 * @param experience specifies the validated experience values
+	 * @return the generated experience identifier
+	 * @throws SQLException when the record cannot be inserted
+	 */
+	public long createExperience(ExperienceRecord experience) throws SQLException {
+		boolean originalAutoCommit = connection.getAutoCommit();
+		connection.setAutoCommit(false);
+		try {
+			String query = "INSERT INTO experienceRecords (lessonId, recordOwner, whatWasDone, " +
+					"howItWasDone, elapsedMinutes, experienceLocked, whatLocked, howLocked, " +
+					"elapsedLocked, effortLocked) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+			long id;
+			try (PreparedStatement pstmt = connection.prepareStatement(query,
+					Statement.RETURN_GENERATED_KEYS)) {
+				pstmt.setLong(1, experience.getLessonId());
+				pstmt.setString(2, experience.getOwner());
+				pstmt.setString(3, experience.getWhatWasDone());
+				pstmt.setString(4, experience.getHowItWasDone());
+				pstmt.setDouble(5, experience.getElapsedMinutes());
+				pstmt.setBoolean(6, experience.isExperienceLocked());
+				pstmt.setBoolean(7, experience.isWhatWasDoneLocked());
+				pstmt.setBoolean(8, experience.isHowItWasDoneLocked());
+				pstmt.setBoolean(9, experience.isElapsedTimeLocked());
+				pstmt.setBoolean(10, experience.isTeamEffortLocked());
+				if (pstmt.executeUpdate() != 1)
+					throw new SQLException("The experience was not inserted.");
+				try (ResultSet keys = pstmt.getGeneratedKeys()) {
+					if (!keys.next()) throw new SQLException(
+							"The experience identifier was not generated.");
+					id = keys.getLong(1);
+				}
+			}
+			insertEfforts(id, experience.getTeamEfforts());
+			connection.commit();
+			return id;
+		} catch (SQLException e) {
+			connection.rollback();
+			throw e;
+		} finally {
+			connection.setAutoCommit(originalAutoCommit);
+		}
+	}
+
+	/*******
+	 * <p> Method: ExperienceRecord getExperience(long id) </p>
+	 *
+	 * @param id specifies the experience identifier
+	 * @return the matching record, or null when it does not exist
+	 * @throws SQLException when the record cannot be read
+	 */
+	public ExperienceRecord getExperience(long id) throws SQLException {
+		String query = "SELECT id, lessonId, recordOwner, whatWasDone, howItWasDone, " +
+				"elapsedMinutes, experienceLocked, whatLocked, howLocked, elapsedLocked, " +
+				"effortLocked FROM experienceRecords WHERE id = ?";
+		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+			pstmt.setLong(1, id);
+			try (ResultSet rs = pstmt.executeQuery()) {
+				if (rs.next()) return experienceFromResult(rs);
+			}
+		}
+		return null;
+	}
+
+	/*******
+	 * <p> Method: List&lt;ExperienceRecord&gt; getExperiencesForLesson(long lessonId) </p>
+	 *
+	 * @param lessonId specifies the parent lesson
+	 * @return related experience records ordered by identifier
+	 * @throws SQLException when the records cannot be read
+	 */
+	public List<ExperienceRecord> getExperiencesForLesson(long lessonId) throws SQLException {
+		List<ExperienceRecord> experiences = new ArrayList<ExperienceRecord>();
+		String query = "SELECT id, lessonId, recordOwner, whatWasDone, howItWasDone, " +
+				"elapsedMinutes, experienceLocked, whatLocked, howLocked, elapsedLocked, " +
+				"effortLocked FROM experienceRecords WHERE lessonId = ? ORDER BY id";
+		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+			pstmt.setLong(1, lessonId);
+			try (ResultSet rs = pstmt.executeQuery()) {
+				while (rs.next()) experiences.add(experienceFromResult(rs));
+			}
+		}
+		return experiences;
+	}
+
+	/*******
+	 * <p> Method: boolean updateExperience(ExperienceRecord experience) </p>
+	 *
+	 * <p> Description: Update the record and replace its effort rows atomically.</p>
+	 *
+	 * @param experience specifies the validated replacement values
+	 * @return true when one experience was changed
+	 * @throws SQLException when the update cannot be completed
+	 */
+	public boolean updateExperience(ExperienceRecord experience) throws SQLException {
+		boolean originalAutoCommit = connection.getAutoCommit();
+		connection.setAutoCommit(false);
+		try {
+			String query = "UPDATE experienceRecords SET whatWasDone = ?, howItWasDone = ?, " +
+					"elapsedMinutes = ? WHERE id = ? AND lessonId = ? AND recordOwner = ?";
+			int changed;
+			try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+				pstmt.setString(1, experience.getWhatWasDone());
+				pstmt.setString(2, experience.getHowItWasDone());
+				pstmt.setDouble(3, experience.getElapsedMinutes());
+				pstmt.setLong(4, experience.getId());
+				pstmt.setLong(5, experience.getLessonId());
+				pstmt.setString(6, experience.getOwner());
+				changed = pstmt.executeUpdate();
+			}
+			if (changed != 1) {
+				connection.rollback();
+				return false;
+			}
+			try (PreparedStatement pstmt = connection.prepareStatement(
+					"DELETE FROM experienceEfforts WHERE experienceId = ?")) {
+				pstmt.setLong(1, experience.getId());
+				pstmt.executeUpdate();
+			}
+			insertEfforts(experience.getId(), experience.getTeamEfforts());
+			connection.commit();
+			return true;
+		} catch (SQLException e) {
+			connection.rollback();
+			throw e;
+		} finally {
+			connection.setAutoCommit(originalAutoCommit);
+		}
+	}
+
+	/*******
+	 * <p> Method: boolean deleteExperience(long id) </p>
+	 *
+	 * @param id specifies the experience identifier
+	 * @return true when one experience was removed
+	 * @throws SQLException when deletion cannot be completed
+	 */
+	public boolean deleteExperience(long id) throws SQLException {
+		try (PreparedStatement pstmt = connection.prepareStatement(
+				"DELETE FROM experienceRecords WHERE id = ?")) {
+			pstmt.setLong(1, id);
+			return pstmt.executeUpdate() == 1;
+		}
+	}
+
+	/*******
+	 * @return the total number of stored experience records
+	 * @throws SQLException when the count cannot be read
+	 */
+	public int getExperienceCount() throws SQLException {
+		try (ResultSet rs = statement.executeQuery("SELECT COUNT(*) FROM experienceRecords")) {
+			return rs.next() ? rs.getInt(1) : 0;
+		}
+	}
+
+	// The following package-protected helpers seed Phase Three-owned state for HW2 tests.  They are
+	// deliberately unavailable to the contributor UI, which must respect but not create locks.
+	boolean setLessonLocksForTesting(long id, boolean lessonLocked, boolean titleLocked,
+			boolean problemLocked, boolean lessonTextLocked) throws SQLException {
+		String query = "UPDATE lessons SET lessonLocked = ?, titleLocked = ?, problemLocked = ?, " +
+				"lessonTextLocked = ? WHERE id = ?";
+		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+			pstmt.setBoolean(1, lessonLocked);
+			pstmt.setBoolean(2, titleLocked);
+			pstmt.setBoolean(3, problemLocked);
+			pstmt.setBoolean(4, lessonTextLocked);
+			pstmt.setLong(5, id);
+			return pstmt.executeUpdate() == 1;
+		}
+	}
+
+	boolean updateLessonCoreForTesting(long id, String title, String problem,
+			String lessonText) throws SQLException {
+		String query = "UPDATE lessons SET title = ?, problemSituation = ?, lessonText = ? " +
+				"WHERE id = ?";
+		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+			pstmt.setString(1, title);
+			pstmt.setString(2, problem);
+			pstmt.setString(3, lessonText);
+			pstmt.setLong(4, id);
+			return pstmt.executeUpdate() == 1;
+		}
+	}
+
+	boolean setHiddenRoleInformationForTesting(long id, String information) throws SQLException {
+		try (PreparedStatement pstmt = connection.prepareStatement(
+				"UPDATE lessons SET hiddenRoleInformation = ? WHERE id = ?")) {
+			pstmt.setString(1, information);
+			pstmt.setLong(2, id);
+			return pstmt.executeUpdate() == 1;
+		}
+	}
+
+	String getHiddenRoleInformationForTesting(long id) throws SQLException {
+		try (PreparedStatement pstmt = connection.prepareStatement(
+				"SELECT hiddenRoleInformation FROM lessons WHERE id = ?")) {
+			pstmt.setLong(1, id);
+			try (ResultSet rs = pstmt.executeQuery()) {
+				return rs.next() ? rs.getString(1) : null;
+			}
+		}
+	}
+
+	boolean setExperienceLocksForTesting(long id, boolean experienceLocked,
+			boolean whatLocked, boolean howLocked, boolean elapsedLocked,
+			boolean effortLocked) throws SQLException {
+		String query = "UPDATE experienceRecords SET experienceLocked = ?, whatLocked = ?, " +
+				"howLocked = ?, elapsedLocked = ?, effortLocked = ? WHERE id = ?";
+		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+			pstmt.setBoolean(1, experienceLocked);
+			pstmt.setBoolean(2, whatLocked);
+			pstmt.setBoolean(3, howLocked);
+			pstmt.setBoolean(4, elapsedLocked);
+			pstmt.setBoolean(5, effortLocked);
+			pstmt.setLong(6, id);
+			return pstmt.executeUpdate() == 1;
+		}
+	}
+
+	private LessonLearned lessonFromResult(ResultSet rs) throws SQLException {
+		return new LessonLearned(rs.getLong("id"), rs.getString("lessonOwner"),
+				rs.getString("title"), rs.getString("problemSituation"),
+				rs.getString("lessonText"), rs.getBoolean("lessonLocked"),
+				rs.getBoolean("titleLocked"), rs.getBoolean("problemLocked"),
+				rs.getBoolean("lessonTextLocked"));
+	}
+
+	private ExperienceRecord experienceFromResult(ResultSet rs) throws SQLException {
+		long id = rs.getLong("id");
+		return new ExperienceRecord(id, rs.getLong("lessonId"), rs.getString("recordOwner"),
+				rs.getString("whatWasDone"), rs.getString("howItWasDone"),
+				rs.getDouble("elapsedMinutes"), getEfforts(id),
+				rs.getBoolean("experienceLocked"), rs.getBoolean("whatLocked"),
+				rs.getBoolean("howLocked"), rs.getBoolean("elapsedLocked"),
+				rs.getBoolean("effortLocked"));
+	}
+
+	private List<TeamMemberEffort> getEfforts(long experienceId) throws SQLException {
+		List<TeamMemberEffort> efforts = new ArrayList<TeamMemberEffort>();
+		String query = "SELECT memberName, effortMinutes FROM experienceEfforts " +
+				"WHERE experienceId = ? ORDER BY entryOrder";
+		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+			pstmt.setLong(1, experienceId);
+			try (ResultSet rs = pstmt.executeQuery()) {
+				while (rs.next()) efforts.add(new TeamMemberEffort(rs.getString("memberName"),
+						rs.getDouble("effortMinutes")));
+			}
+		}
+		return efforts;
+	}
+
+	private void insertEfforts(long experienceId, List<TeamMemberEffort> efforts)
+			throws SQLException {
+		String query = "INSERT INTO experienceEfforts (experienceId, entryOrder, memberName, " +
+				"effortMinutes) VALUES (?, ?, ?, ?)";
+		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+			for (int index = 0; index < efforts.size(); index++) {
+				TeamMemberEffort effort = efforts.get(index);
+				pstmt.setLong(1, experienceId);
+				pstmt.setInt(2, index);
+				pstmt.setString(3, effort.getMemberName());
+				pstmt.setDouble(4, effort.getEffortMinutes());
+				pstmt.addBatch();
+			}
+			pstmt.executeBatch();
+		}
+	}
 
 	
 	/*******
