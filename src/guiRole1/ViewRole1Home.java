@@ -129,7 +129,7 @@ public class ViewRole1Home {
 		label_UserDetails.setText("User: " + theUser.getUserName());
 				
 		// Set the title for the window, display the page, and wait for the Admin to do something
-		theStage.setTitle("HW2: Contributor Home Page");
+		theStage.setTitle("TP2: Contributor Home Page");
 		theStage.setScene(theViewRole1HomeScene);
 		theStage.show();
 	}

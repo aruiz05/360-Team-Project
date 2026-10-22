@@ -1,4 +1,4 @@
-package guiLessons;
+package guiContributorLessons;
 
 import entityClasses.LessonsLearned;
 import entityClasses.LessonsLearnedList;
@@ -14,22 +14,31 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.Pane;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
 /*******
- * <p> Title: ViewLessons Class. </p>
+ * <p> Title: ViewContributorLessons Class. </p>
  *
- * <p> Description: Displays the signed-in contributor's lesson collection and a simple title
- * subset.  Every refresh replaces the table contents with current database results so additions,
- * edits, and deletions cannot leave stale entries.</p>
+ * <p> Description: The JavaFX View for the Contributor Lessons window. It displays only the
+ * signed-in contributor's lessons, supports title-keyword subsets, and provides the visible
+ * controls needed to create, read, update, and delete a selected lesson. The owner restriction
+ * is enforced again by the Model and persistent classes; the View never requests a system-wide
+ * lesson list.</p>
+ *
+ * <p>The table selection controls which actions are available. Delete is disabled when the
+ * complete lesson or any core field is locked, while Edit remains available when at least one
+ * core field can still be changed. Every refresh replaces the table contents with current
+ * persistent values so the user never sees a stale or duplicate row.</p>
  *
  * @author CSE 360 Team Project
  *
  * @version 1.00        2026-10-01 Initial HW2 version
+ * @version 2.00        2026-10-22 Separated the Contributor list into its own MVC package
  */
-public class ViewLessons {
+public class ViewContributorLessons {
 
 	private static final double WIDTH = applicationMain.FoundationsMain.WINDOW_WIDTH;
 	private static final double HEIGHT = applicationMain.FoundationsMain.WINDOW_HEIGHT;
@@ -50,7 +59,7 @@ public class ViewLessons {
 	private static final Button buttonLogout = new Button("Logout");
 	private static final Button buttonQuit = new Button("Quit");
 
-	private static ViewLessons theView;
+	private static ViewContributorLessons theView;
 	protected static Stage theStage;
 	protected static User theUser;
 	private static Scene scene;
@@ -62,15 +71,15 @@ public class ViewLessons {
 	public static void displayLessons(Stage stage, User user) {
 		theStage = stage;
 		theUser = user;
-		if (theView == null) theView = new ViewLessons();
+		if (theView == null) theView = new ViewContributorLessons();
 		labelUser.setText("Contributor: " + user.getUserName());
-		ControllerLessons.performRefresh();
-		stage.setTitle("HW2: My Lessons Learned");
+		ControllerContributorLessons.performRefresh();
+		stage.setTitle("TP2: My Lessons Learned");
 		stage.setScene(scene);
 		stage.show();
 	}
 
-	private ViewLessons() {
+	private ViewContributorLessons() {
 		Pane root = new Pane();
 		scene = new Scene(root, WIDTH, HEIGHT);
 		guiTools.ASUTheme.apply(scene);
@@ -80,7 +89,7 @@ public class ViewLessons {
 		setupLabel(labelUser, 17, 300, Pos.BASELINE_LEFT, 20, 55);
 		setupLabel(labelStatus, 15, 430, Pos.BASELINE_LEFT, 350, 55);
 
-		fieldFilter.setPromptText("Filter by title");
+		fieldFilter.setPromptText("Filter by one or more title keywords");
 		fieldFilter.setLayoutX(20);
 		fieldFilter.setLayoutY(87);
 		fieldFilter.setPrefWidth(330);
@@ -113,34 +122,41 @@ public class ViewLessons {
 		tableLessons.setPrefSize(WIDTH - 40, 330);
 		tableLessons.setPlaceholder(new Label("No lessons found."));
 		tableLessons.setOnMouseClicked(event -> {
-			if (event.getClickCount() == 2) ControllerLessons.performView();
+			if (event.getClickCount() == 2) ControllerContributorLessons.performView();
 		});
+		tableLessons.getSelectionModel().selectedItemProperty().addListener(
+				(_, _, _) -> updateActionButtons());
 
 		setupButton(buttonCreate, 125, 20, 475);
 		setupButton(buttonView, 125, 155, 475);
 		setupButton(buttonEdit, 125, 290, 475);
 		setupButton(buttonDelete, 125, 425, 475);
 		guiTools.ASUTheme.styleDanger(buttonDelete);
-		buttonCreate.setOnAction((_) -> ControllerLessons.performCreate());
-		buttonView.setOnAction((_) -> ControllerLessons.performView());
-		buttonEdit.setOnAction((_) -> ControllerLessons.performEdit());
-		buttonDelete.setOnAction((_) -> ControllerLessons.performDelete());
-		buttonFilter.setOnAction((_) -> ControllerLessons.performRefresh());
+		buttonView.setTooltip(new Tooltip("Open the selected lesson and its experience records."));
+		buttonEdit.setTooltip(new Tooltip("Edit the unlocked fields of the selected lesson."));
+		buttonDelete.setTooltip(new Tooltip(
+				"Locked lessons or lessons with a locked field cannot be deleted."));
+		buttonCreate.setOnAction((_) -> ControllerContributorLessons.performCreate());
+		buttonView.setOnAction((_) -> ControllerContributorLessons.performView());
+		buttonEdit.setOnAction((_) -> ControllerContributorLessons.performEdit());
+		buttonDelete.setOnAction((_) -> ControllerContributorLessons.performDelete());
+		buttonFilter.setOnAction((_) -> ControllerContributorLessons.performRefresh());
 		buttonClear.setOnAction((_) -> {
 			fieldFilter.clear();
-			ControllerLessons.performRefresh();
+			ControllerContributorLessons.performRefresh();
 		});
 
 		setupButton(buttonReturn, 200, 20, 540);
 		setupButton(buttonLogout, 200, 300, 540);
 		setupButton(buttonQuit, 200, 580, 540);
-		buttonReturn.setOnAction((_) -> ControllerLessons.performReturn());
-		buttonLogout.setOnAction((_) -> ControllerLessons.performLogout());
-		buttonQuit.setOnAction((_) -> ControllerLessons.performQuit());
+		buttonReturn.setOnAction((_) -> ControllerContributorLessons.performReturn());
+		buttonLogout.setOnAction((_) -> ControllerContributorLessons.performLogout());
+		buttonQuit.setOnAction((_) -> ControllerContributorLessons.performQuit());
 
 		root.getChildren().addAll(labelPageTitle, labelUser, labelStatus, fieldFilter,
 				buttonFilter, buttonClear, tableLessons, buttonCreate, buttonView, buttonEdit,
 				buttonDelete, buttonReturn, buttonLogout, buttonQuit);
+		updateActionButtons();
 	}
 
 	/**
@@ -150,6 +166,7 @@ public class ViewLessons {
 	protected static void setLessons(LessonsLearnedList lessons, String message) {
 		tableLessons.setItems(FXCollections.observableArrayList(lessons.getLessons()));
 		labelStatus.setText(message);
+		updateActionButtons();
 	}
 
 	/** @return the lesson currently selected in the table, or null when none is selected */
@@ -170,6 +187,20 @@ public class ViewLessons {
 	/** @param message describes the completed collection operation */
 	protected static void showInformation(String message) {
 		labelStatus.setText(message);
+	}
+
+	/**********
+	 * <p> Method: updateActionButtons() </p>
+	 *
+	 * <p> Description: Reflect the selected lesson's persisted lock state in the controls. A
+	 * field-level lock still permits editing other fields, but any lock prevents deletion as
+	 * required by the Contributor stories.</p>
+	 */
+	private static void updateActionButtons() {
+		LessonsLearned selected = getSelectedLesson();
+		buttonView.setDisable(selected == null);
+		buttonEdit.setDisable(selected == null || selected.isLessonLocked());
+		buttonDelete.setDisable(selected == null || selected.hasAnyLockedField());
 	}
 
 	private static void setupLabel(Label label, double size, double labelWidth, Pos alignment,

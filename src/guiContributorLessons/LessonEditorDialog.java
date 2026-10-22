@@ -1,9 +1,11 @@
-package guiLessons;
+package guiContributorLessons;
 
 import java.util.Optional;
 
 import entityClasses.LessonsLearned;
+import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
+import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
@@ -11,16 +13,24 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import lessonManagement.LessonDraft;
+import lessonManagement.LessonValidator;
 
 /*******
  * <p> Title: LessonEditorDialog Class. </p>
  *
- * <p> Description: Collects core lesson information and visibly disables fields whose persisted
- * lock state does not allow contributor edits.</p>
+ * <p> Description: Collects the three required core lesson fields for the Contributor Lessons
+ * window. Persisted locks are displayed beside their fields and disable only the values the
+ * contributor is not permitted to change.</p>
+ *
+ * <p>The dialog calls the same non-GUI LessonValidator used by the persistent model before it
+ * closes. This preserves the user's entered values while a helpful correction message is shown.
+ * The Model performs the validation again before any database operation, so bypassing the dialog
+ * cannot save invalid information.</p>
  *
  * @author CSE 360 Team Project
  *
  * @version 1.00        2026-10-01 Initial HW2 version
+ * @version 2.00        2026-10-22 Added in-dialog validation and Save/Cancel actions
  */
 public class LessonEditorDialog {
 
@@ -36,7 +46,8 @@ public class LessonEditorDialog {
 		dialog.setTitle(existing == null ? "Create Lesson" : "Edit Lesson");
 		dialog.setHeaderText(existing == null ? "Enter the lesson's required information." :
 				"Locked fields are shown but cannot be changed.");
-		dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+		ButtonType save = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
+		dialog.getDialogPane().getButtonTypes().addAll(save, ButtonType.CANCEL);
 
 		TextField title = new TextField(existing == null ? "" : existing.getTitle());
 		TextArea problem = area(existing == null ? "" : existing.getProblemSituation());
@@ -60,11 +71,26 @@ public class LessonEditorDialog {
 		grid.add(new Label(label("Lesson learned", existing != null &&
 				(existing.isLessonLocked() || existing.isLessonLearnedLocked()))), 0, 2);
 		grid.add(lesson, 1, 2);
+		Label validationMessage = new Label();
+		validationMessage.setStyle("-fx-text-fill: #8C1D40; -fx-font-weight: bold;");
+		validationMessage.setWrapText(true);
+		grid.add(validationMessage, 0, 3, 2, 1);
 		dialog.getDialogPane().setContent(grid);
 
-		dialog.setResultConverter(button -> button == ButtonType.OK ?
-				new LessonDraft(title.getText(), problem.getText(), lesson.getText()) : null);
+		// Keep the dialog open when a required value is missing so the contributor can correct it.
+		dialog.getDialogPane().lookupButton(save).addEventFilter(ActionEvent.ACTION, event -> {
+			String message = LessonValidator.validate(draft(title, problem, lesson));
+			if (!message.isEmpty()) {
+				validationMessage.setText(message);
+				event.consume();
+			}
+		});
+		dialog.setResultConverter(button -> button == save ? draft(title, problem, lesson) : null);
 		return dialog.showAndWait();
+	}
+
+	private static LessonDraft draft(TextField title, TextArea problem, TextArea lesson) {
+		return new LessonDraft(title.getText(), problem.getText(), lesson.getText());
 	}
 
 	private static TextArea area(String text) {

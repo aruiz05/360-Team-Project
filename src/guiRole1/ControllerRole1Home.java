@@ -54,10 +54,11 @@ public class ControllerRole1Home {
 	/**********
 	 * <p> Method: performManageLessons() </p>
 	 *
-	 * <p> Description: Open the contributor's HW2 lesson collection.</p>
+	 * <p> Description: Open the contributor's TP2 lesson collection.</p>
 	 */
 	protected static void performManageLessons() {
-		guiLessons.ViewLessons.displayLessons(ViewRole1Home.theStage, ViewRole1Home.theUser);
+		guiContributorLessons.ViewContributorLessons.displayLessons(
+				ViewRole1Home.theStage, ViewRole1Home.theUser);
 	}
 
 	/**********

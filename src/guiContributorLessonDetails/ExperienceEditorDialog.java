@@ -1,4 +1,4 @@
-package guiLessons;
+package guiContributorLessonDetails;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,7 +6,9 @@ import java.util.Optional;
 
 import entityClasses.ExperienceRecord;
 import entityClasses.TeamMemberEffort;
+import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
+import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
@@ -15,16 +17,25 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import lessonManagement.EffortInput;
 import lessonManagement.ExperienceDraft;
+import lessonManagement.ExperienceValidator;
+import lessonManagement.OperationResult;
 
 /*******
  * <p> Title: ExperienceEditorDialog Class. </p>
  *
- * <p> Description: Collects experience data using minutes and person-minutes.  Team effort uses
- * one line per member in the readable form {@code Name = minutes}.</p>
+ * <p> Description: Collects one later attempt to use a lesson, including what was done, how it
+ * was done, elapsed minutes, and each team member's person-minute effort. Team effort uses one
+ * line per member in the readable form {@code Name = minutes}.</p>
+ *
+ * <p>Persisted locks disable the corresponding controls. Before the dialog closes, the same
+ * non-GUI ExperienceValidator used by the Model checks required text, member names, and finite,
+ * nonnegative time and effort. Invalid values remain visible so the contributor can correct them.
+ * The Model validates again before saving to protect calls that do not use this dialog.</p>
  *
  * @author CSE 360 Team Project
  *
  * @version 1.00        2026-10-01 Initial HW2 version
+ * @version 2.00        2026-10-22 Added in-dialog validation and Save/Cancel actions
  */
 public class ExperienceEditorDialog {
 
@@ -39,7 +50,8 @@ public class ExperienceEditorDialog {
 		Dialog<ExperienceDraft> dialog = new Dialog<ExperienceDraft>();
 		dialog.setTitle(existing == null ? "Add Experience" : "Edit Experience");
 		dialog.setHeaderText("Use minutes for elapsed time and person-minutes for effort.");
-		dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+		ButtonType save = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
+		dialog.getDialogPane().getButtonTypes().addAll(save, ButtonType.CANCEL);
 
 		TextArea what = area(existing == null ? "" : existing.getWhatWasDone(), 3);
 		TextArea how = area(existing == null ? "" : existing.getHowItWasDone(), 3);
@@ -65,12 +77,30 @@ public class ExperienceEditorDialog {
 		grid.add(elapsed, 1, 2);
 		grid.add(new Label("Team effort\nName = person-minutes" + locked(existing, 4)), 0, 3);
 		grid.add(efforts, 1, 3);
+		Label validationMessage = new Label();
+		validationMessage.setStyle("-fx-text-fill: #8C1D40; -fx-font-weight: bold;");
+		validationMessage.setWrapText(true);
+		grid.add(validationMessage, 0, 4, 2, 1);
 		dialog.getDialogPane().setContent(grid);
 
-		dialog.setResultConverter(button -> button == ButtonType.OK ?
-				new ExperienceDraft(what.getText(), how.getText(), elapsed.getText(),
-						parseEfforts(efforts.getText())) : null);
+		// Keep invalid values in view instead of closing the dialog and forcing re-entry.
+		dialog.getDialogPane().lookupButton(save).addEventFilter(ActionEvent.ACTION, event -> {
+			OperationResult<ExperienceValidator.ValidatedExperience> validation =
+					ExperienceValidator.validate(draft(what, how, elapsed, efforts));
+			if (!validation.isSuccessful()) {
+				validationMessage.setText(validation.getMessage());
+				event.consume();
+			}
+		});
+		dialog.setResultConverter(button -> button == save ?
+				draft(what, how, elapsed, efforts) : null);
 		return dialog.showAndWait();
+	}
+
+	private static ExperienceDraft draft(TextArea what, TextArea how, TextField elapsed,
+			TextArea efforts) {
+		return new ExperienceDraft(what.getText(), how.getText(), elapsed.getText(),
+				parseEfforts(efforts.getText()));
 	}
 
 	private static TextArea area(String text, int rows) {

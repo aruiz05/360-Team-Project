@@ -282,7 +282,7 @@ public class ViewListUsers {
         }
 
         if (user.getNewRole1()) {
-            roles.add("Role1");
+			roles.add(guiTools.RoleNames.CONTRIBUTOR);
         }
 
         if (user.getNewRole2()) {

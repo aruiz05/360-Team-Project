@@ -98,13 +98,13 @@ public class ControllerNewAccount {
 			
 			// The passwords match so we will set up the role and the User object base on the 
 			// information provided in the invitation
-			if (ViewNewAccount.theRole.compareTo("Admin") == 0) {
+			if (guiTools.RoleNames.ADMIN.equals(ViewNewAccount.theRole)) {
 				roleCode = 1;
 				user = new User(username, password, "", "", "", "", "", true, false, false);
-			} else if (ViewNewAccount.theRole.compareTo("Role1") == 0) {
+			} else if (guiTools.RoleNames.isContributor(ViewNewAccount.theRole)) {
 				roleCode = 2;
 				user = new User(username, password, "", "", "", "", "", false, true, false);
-			} else if (ViewNewAccount.theRole.compareTo("Role2") == 0) {
+			} else if (guiTools.RoleNames.ROLE_2.equals(ViewNewAccount.theRole)) {
 				roleCode = 3;
 				user = new User(username, password, "", "", "", "", "", false, false, true);
 			} else {

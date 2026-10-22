@@ -1,4 +1,4 @@
-package guiLessons;
+package guiContributorLessonDetails;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -18,22 +18,29 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.Pane;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
 /*******
- * <p> Title: ViewLessonDetails Class. </p>
+ * <p> Title: ViewContributorLessonDetails Class. </p>
  *
- * <p> Description: Shows contributor-visible core content, lock status, and all related
- * experience records.  Separate information added by another role is intentionally not part of
- * this view model.</p>
+ * <p> Description: The JavaFX View for one contributor-owned lesson and its experience records.
+ * It shows current core content, the owner, clear lock status for each core field, and the time
+ * and effort information from later attempts to use the lesson. Separate information added by
+ * another role is intentionally absent from this View.</p>
+ *
+ * <p>Action availability follows the persisted lock state. A whole-lesson lock prevents adding
+ * or changing experience information, while a field-level experience lock disables deletion but
+ * still permits editing any unlocked experience fields.</p>
  *
  * @author CSE 360 Team Project
  *
  * @version 1.00        2026-10-01 Initial HW2 version
+ * @version 2.00        2026-10-22 Separated lesson details into its own MVC package
  */
-public class ViewLessonDetails {
+public class ViewContributorLessonDetails {
 
 	private static final double WIDTH = applicationMain.FoundationsMain.WINDOW_WIDTH;
 	private static final double HEIGHT = applicationMain.FoundationsMain.WINDOW_HEIGHT;
@@ -54,7 +61,7 @@ public class ViewLessonDetails {
 	private static final Button buttonDelete = new Button("Delete Experience");
 	private static final Button buttonBack = new Button("Back to Lessons");
 
-	private static ViewLessonDetails theView;
+	private static ViewContributorLessonDetails theView;
 	protected static Stage theStage;
 	protected static User theUser;
 	protected static LessonsLearned currentLesson;
@@ -69,14 +76,14 @@ public class ViewLessonDetails {
 		theStage = stage;
 		theUser = user;
 		currentLesson = lesson;
-		if (theView == null) theView = new ViewLessonDetails();
-		ControllerLessonDetails.performRefresh();
-		stage.setTitle("HW2: Lesson Details");
+		if (theView == null) theView = new ViewContributorLessonDetails();
+		ControllerContributorLessonDetails.performRefresh();
+		stage.setTitle("TP2: Lesson Details");
 		stage.setScene(scene);
 		stage.show();
 	}
 
-	private ViewLessonDetails() {
+	private ViewContributorLessonDetails() {
 		Pane root = new Pane();
 		scene = new Scene(root, WIDTH, HEIGHT);
 		guiTools.ASUTheme.apply(scene);
@@ -139,22 +146,29 @@ public class ViewLessonDetails {
 		tableExperiences.setLayoutY(260);
 		tableExperiences.setPrefSize(WIDTH - 40, 220);
 		tableExperiences.setPlaceholder(new Label("No experience records found."));
+		tableExperiences.getSelectionModel().selectedItemProperty().addListener(
+				(_, _, _) -> updateActionButtons());
 
 		setupButton(buttonAdd, 190, 20, 492);
 		setupButton(buttonEdit, 190, 220, 492);
 		setupButton(buttonDelete, 190, 420, 492);
 		setupButton(buttonBack, 170, 610, 540);
 		guiTools.ASUTheme.styleDanger(buttonDelete);
-		buttonAdd.setOnAction((_) -> ControllerLessonDetails.performAdd());
-		buttonEdit.setOnAction((_) -> ControllerLessonDetails.performEdit());
-		buttonDelete.setOnAction((_) -> ControllerLessonDetails.performDelete());
-		buttonBack.setOnAction((_) -> ControllerLessonDetails.performBack());
+		buttonEdit.setTooltip(new Tooltip(
+				"Edit the unlocked fields of the selected experience record."));
+		buttonDelete.setTooltip(new Tooltip(
+				"Locked experience records or fields cannot be deleted."));
+		buttonAdd.setOnAction((_) -> ControllerContributorLessonDetails.performAdd());
+		buttonEdit.setOnAction((_) -> ControllerContributorLessonDetails.performEdit());
+		buttonDelete.setOnAction((_) -> ControllerContributorLessonDetails.performDelete());
+		buttonBack.setOnAction((_) -> ControllerContributorLessonDetails.performBack());
 
 		root.getChildren().addAll(labelPageTitle, labelIdentity, labelStatus,
 				labelTitle, labelProblem, labelLesson, textTitle, textProblem, textLesson,
 				labelTitleLock, labelProblemLock,
 				labelLessonLock, tableExperiences, buttonAdd, buttonEdit, buttonDelete,
 				buttonBack);
+		updateActionButtons();
 	}
 
 	/** @param lesson specifies the current contributor-visible lesson and lock state */
@@ -169,7 +183,7 @@ public class ViewLessonDetails {
 				lesson.isLessonLocked() || lesson.isProblemSituationLocked()));
 		labelLessonLock.setText(lockText(
 				lesson.isLessonLocked() || lesson.isLessonLearnedLocked()));
-		buttonAdd.setDisable(lesson.isLessonLocked());
+		updateActionButtons();
 	}
 
 	/**
@@ -179,6 +193,7 @@ public class ViewLessonDetails {
 	protected static void setExperiences(List<ExperienceRecord> experiences, String message) {
 		tableExperiences.setItems(FXCollections.observableArrayList(experiences));
 		labelStatus.setText(message);
+		updateActionButtons();
 	}
 
 	/** @return the experience currently selected in the table, or null when none is selected */
@@ -199,6 +214,22 @@ public class ViewLessonDetails {
 	/** @param message describes the completed detail operation */
 	protected static void showInformation(String message) {
 		labelStatus.setText(message);
+	}
+
+	/**********
+	 * <p> Method: updateActionButtons() </p>
+	 *
+	 * <p> Description: Keep the experience actions consistent with the currently displayed
+	 * lesson, selected record, and their lock states.</p>
+	 */
+	private static void updateActionButtons() {
+		boolean lessonUnavailable = currentLesson == null || currentLesson.isLessonLocked();
+		ExperienceRecord selected = getSelectedExperience();
+		buttonAdd.setDisable(lessonUnavailable);
+		buttonEdit.setDisable(lessonUnavailable || selected == null ||
+				selected.isExperienceLocked());
+		buttonDelete.setDisable(lessonUnavailable || selected == null ||
+				selected.hasAnyLockedField());
 	}
 
 	private static TextArea displayArea(int rows) {
