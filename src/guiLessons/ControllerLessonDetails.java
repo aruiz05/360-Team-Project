@@ -3,7 +3,7 @@ package guiLessons;
 import java.util.Optional;
 
 import entityClasses.ExperienceRecord;
-import entityClasses.LessonLearned;
+import entityClasses.LessonsLearned;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import lessonManagement.ExperienceDraft;
@@ -26,7 +26,7 @@ public class ControllerLessonDetails {
 	/** Reload the selected lesson and its current experience records from the database. */
 	protected static void performRefresh() {
 		String owner = ViewLessonDetails.theUser.getUserName();
-		OperationResult<LessonLearned> lesson = ModelLessons.read(owner,
+		OperationResult<LessonsLearned> lesson = ModelLessons.read(owner,
 				ViewLessonDetails.currentLesson.getId());
 		if (!lesson.isSuccessful()) {
 			ViewLessonDetails.showError(lesson.getMessage());

@@ -5,17 +5,18 @@ import java.util.List;
 
 import database.Database;
 import entityClasses.ExperienceRecord;
-import entityClasses.LessonLearned;
-import entityClasses.LessonsCollection;
+import entityClasses.LessonsLearned;
+import entityClasses.LessonsLearnedList;
 import entityClasses.TeamMemberEffort;
 import lessonManagement.ExperienceValidator.ValidatedExperience;
 
 /*******
  * <p> Title: LessonService Class. </p>
  *
- * <p> Description: Coordinates lesson and experience CRUD.  It validates complete requests and
- * checks ownership and lock state before calling the Database, which ensures a rejected request
- * leaves saved data unchanged.</p>
+ * <p> Description: Coordinates lesson and experience CRUD for the JavaFX models. Lesson
+ * operations delegate to {@link LessonsLearned} and {@link LessonsLearnedList}, which own the
+ * TP2 persistence, validation, ownership, and lock rules. Experience operations remain here and
+ * use the same database and validation boundary.</p>
  *
  * @author CSE 360 Team Project
  *
@@ -39,21 +40,11 @@ public class LessonService {
 	 * @param draft specifies the proposed core information
 	 * @return the created lesson or a helpful error
 	 */
-	public OperationResult<LessonLearned> createLesson(String owner, LessonDraft draft) {
-		if (blank(owner)) return OperationResult.failure(
-				"Sign in as a contributor before creating a lesson.");
-		String validation = LessonValidator.validate(draft);
-		if (!validation.isEmpty()) return OperationResult.failure(validation);
-
-		LessonLearned proposed = new LessonLearned(0, owner.trim(), draft.getTitle().trim(),
-				draft.getProblemSituation().trim(), draft.getLessonLearned().trim(),
-				false, false, false, false);
-		try {
-			long id = database.createLesson(proposed);
-			return OperationResult.success(database.getLesson(id), "Lesson created.");
-		} catch (SQLException e) {
-			return OperationResult.failure("The lesson could not be saved. Try again.");
-		}
+	public OperationResult<LessonsLearned> createLesson(String owner, LessonDraft draft) {
+		OperationResult<LessonsLearnedList> list =
+				LessonsLearnedList.readForContributor(database, owner);
+		if (!list.isSuccessful()) return OperationResult.failure(list.getMessage());
+		return list.getValue().create(database, owner, draft);
 	}
 
 	/**********
@@ -63,19 +54,13 @@ public class LessonService {
 	 * @param contributor specifies the signed-in contributor
 	 * @return the contributor-visible lesson or a helpful error
 	 */
-	public OperationResult<LessonLearned> readLesson(String idInput, String contributor) {
+	public OperationResult<LessonsLearned> readLesson(String idInput, String contributor) {
 		OperationResult<Long> parsed = parseLessonId(idInput);
 		if (!parsed.isSuccessful()) return OperationResult.failure(parsed.getMessage());
-		try {
-			LessonLearned lesson = database.getLesson(parsed.getValue());
-			if (lesson == null)
-				return OperationResult.failure("Lesson not found. Refresh the list.");
-			if (!lesson.getOwner().equals(contributor))
-				return OperationResult.failure("You can only view your own lessons.");
-			return OperationResult.success(lesson, "Lesson loaded.");
-		} catch (SQLException e) {
-			return OperationResult.failure("The lesson could not be loaded. Try again.");
-		}
+		OperationResult<LessonsLearnedList> list =
+				LessonsLearnedList.readForContributor(database, contributor);
+		if (!list.isSuccessful()) return OperationResult.failure(list.getMessage());
+		return list.getValue().read(database, parsed.getValue(), contributor);
 	}
 
 	/**********
@@ -84,18 +69,8 @@ public class LessonService {
 	 * @param contributor specifies the signed-in contributor
 	 * @return only that contributor's lessons
 	 */
-	public OperationResult<LessonsCollection> listLessons(String contributor) {
-		if (blank(contributor))
-			return OperationResult.failure("Sign in as a contributor to view lessons.");
-		try {
-			LessonsCollection lessons = new LessonsCollection(
-					database.getLessonsByOwner(contributor));
-			String message = lessons.isEmpty() ? "No lessons found." :
-					lessons.size() + " lesson(s) found.";
-			return OperationResult.success(lessons, message);
-		} catch (SQLException e) {
-			return OperationResult.failure("The lesson list could not be loaded. Try again.");
-		}
+	public OperationResult<LessonsLearnedList> listLessons(String contributor) {
+		return LessonsLearnedList.readForContributor(database, contributor);
 	}
 
 	/**********
@@ -105,10 +80,10 @@ public class LessonService {
 	 * @param titleText specifies the simple title filter
 	 * @return the matching contributor-only subset
 	 */
-	public OperationResult<LessonsCollection> filterLessons(String contributor, String titleText) {
-		OperationResult<LessonsCollection> full = listLessons(contributor);
+	public OperationResult<LessonsLearnedList> filterLessons(String contributor, String titleText) {
+		OperationResult<LessonsLearnedList> full = listLessons(contributor);
 		if (!full.isSuccessful()) return full;
-		LessonsCollection subset = full.getValue().filterByTitle(titleText);
+		LessonsLearnedList subset = full.getValue().filterByKeywords(titleText);
 		String message = subset.isEmpty() ? "No lessons found." :
 				subset.size() + " lesson(s) found.";
 		return OperationResult.success(subset, message);
@@ -122,44 +97,14 @@ public class LessonService {
 	 * @param draft specifies the proposed replacement values
 	 * @return the updated lesson or a helpful error
 	 */
-	public OperationResult<LessonLearned> updateLesson(String idInput, String contributor,
+	public OperationResult<LessonsLearned> updateLesson(String idInput, String contributor,
 			LessonDraft draft) {
 		OperationResult<Long> parsed = parseLessonId(idInput);
 		if (!parsed.isSuccessful()) return OperationResult.failure(parsed.getMessage());
-		try {
-			LessonLearned existing = database.getLesson(parsed.getValue());
-			if (existing == null)
-				return OperationResult.failure("Lesson not found. Refresh the list.");
-			if (!existing.getOwner().equals(contributor))
-				return OperationResult.failure("You can only edit your own lessons.");
-			if (existing.isLessonLocked())
-				return OperationResult.failure("This lesson is locked and cannot be edited.");
-
-			String validation = LessonValidator.validate(draft);
-			if (!validation.isEmpty()) return OperationResult.failure(validation);
-
-			String title = draft.getTitle().trim();
-			String problem = draft.getProblemSituation().trim();
-			String lessonText = draft.getLessonLearned().trim();
-			if (existing.isTitleLocked() && !existing.getTitle().equals(title))
-				return OperationResult.failure("This field is locked and cannot be edited.");
-			if (existing.isProblemSituationLocked() &&
-					!existing.getProblemSituation().equals(problem))
-				return OperationResult.failure("This field is locked and cannot be edited.");
-			if (existing.isLessonLearnedLocked() &&
-					!existing.getLessonLearned().equals(lessonText))
-				return OperationResult.failure("This field is locked and cannot be edited.");
-
-			LessonLearned updated = new LessonLearned(existing.getId(), existing.getOwner(),
-					title, problem, lessonText, existing.isLessonLocked(),
-					existing.isTitleLocked(), existing.isProblemSituationLocked(),
-					existing.isLessonLearnedLocked());
-			if (!database.updateLesson(updated))
-				return OperationResult.failure("Lesson not found. Refresh the list.");
-			return OperationResult.success(database.getLesson(updated.getId()), "Lesson updated.");
-		} catch (SQLException e) {
-			return OperationResult.failure("The lesson could not be updated. Try again.");
-		}
+		OperationResult<LessonsLearnedList> list =
+				LessonsLearnedList.readForContributor(database, contributor);
+		if (!list.isSuccessful()) return OperationResult.failure(list.getMessage());
+		return list.getValue().update(database, parsed.getValue(), contributor, draft);
 	}
 
 	/**********
@@ -172,21 +117,10 @@ public class LessonService {
 	public OperationResult<Boolean> deleteLesson(String idInput, String contributor) {
 		OperationResult<Long> parsed = parseLessonId(idInput);
 		if (!parsed.isSuccessful()) return OperationResult.failure(parsed.getMessage());
-		try {
-			LessonLearned existing = database.getLesson(parsed.getValue());
-			if (existing == null)
-				return OperationResult.failure("Lesson not found. Refresh the list.");
-			if (!existing.getOwner().equals(contributor))
-				return OperationResult.failure("You can only delete your own lessons.");
-			if (existing.hasAnyLockedField())
-				return OperationResult.failure(
-						"This lesson or one of its fields is locked and cannot be deleted.");
-			if (!database.deleteLesson(existing.getId()))
-				return OperationResult.failure("Lesson not found. Refresh the list.");
-			return OperationResult.success(Boolean.TRUE, "Lesson deleted.");
-		} catch (SQLException e) {
-			return OperationResult.failure("The lesson could not be deleted. Try again.");
-		}
+		OperationResult<LessonsLearnedList> list =
+				LessonsLearnedList.readForContributor(database, contributor);
+		if (!list.isSuccessful()) return OperationResult.failure(list.getMessage());
+		return list.getValue().delete(database, parsed.getValue(), contributor);
 	}
 
 	/**********
@@ -203,7 +137,7 @@ public class LessonService {
 		OperationResult<Long> parsed = parseLessonId(lessonIdInput);
 		if (!parsed.isSuccessful()) return OperationResult.failure(parsed.getMessage());
 		try {
-			LessonLearned lesson = database.getLesson(parsed.getValue());
+			LessonsLearned lesson = database.getLesson(parsed.getValue());
 			if (lesson == null) return OperationResult.failure("Lesson not found.");
 			if (!lesson.getOwner().equals(contributor))
 				return OperationResult.failure(
@@ -238,7 +172,7 @@ public class LessonService {
 			ExperienceRecord experience = database.getExperience(parsed.getValue());
 			if (experience == null)
 				return OperationResult.failure("Experience record not found.");
-			LessonLearned lesson = database.getLesson(experience.getLessonId());
+			LessonsLearned lesson = database.getLesson(experience.getLessonId());
 			if (lesson == null) return OperationResult.failure("Lesson not found.");
 			if (!experience.getOwner().equals(contributor) ||
 					!lesson.getOwner().equals(contributor))
@@ -262,7 +196,7 @@ public class LessonService {
 		OperationResult<Long> parsed = parseLessonId(lessonIdInput);
 		if (!parsed.isSuccessful()) return OperationResult.failure(parsed.getMessage());
 		try {
-			LessonLearned lesson = database.getLesson(parsed.getValue());
+			LessonsLearned lesson = database.getLesson(parsed.getValue());
 			if (lesson == null) return OperationResult.failure("Lesson not found.");
 			if (!lesson.getOwner().equals(contributor))
 				return OperationResult.failure(
@@ -293,7 +227,7 @@ public class LessonService {
 			ExperienceRecord existing = database.getExperience(parsed.getValue());
 			if (existing == null)
 				return OperationResult.failure("Experience record not found.");
-			LessonLearned lesson = database.getLesson(existing.getLessonId());
+			LessonsLearned lesson = database.getLesson(existing.getLessonId());
 			if (lesson == null) return OperationResult.failure("Lesson not found.");
 			if (!existing.getOwner().equals(contributor) ||
 					!lesson.getOwner().equals(contributor))
@@ -349,7 +283,7 @@ public class LessonService {
 			ExperienceRecord existing = database.getExperience(parsed.getValue());
 			if (existing == null)
 				return OperationResult.failure("Experience record not found.");
-			LessonLearned lesson = database.getLesson(existing.getLessonId());
+			LessonsLearned lesson = database.getLesson(existing.getLessonId());
 			if (lesson == null) return OperationResult.failure("Lesson not found.");
 			if (!existing.getOwner().equals(contributor) ||
 					!lesson.getOwner().equals(contributor))

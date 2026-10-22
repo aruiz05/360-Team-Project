@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.UUID;
 
 import entityClasses.ExperienceRecord;
-import entityClasses.LessonLearned;
+import entityClasses.LessonsLearned;
 import entityClasses.TeamMemberEffort;
 import entityClasses.User;
 
@@ -1274,7 +1274,7 @@ public class Database {
 	**********************************************************************************************/
 
 	/*******
-	 * <p> Method: long createLesson(LessonLearned lesson) </p>
+	 * <p> Method: long createLesson(LessonsLearned lesson) </p>
 	 *
 	 * <p> Description: Insert a validated lesson and return its database-generated identifier.</p>
 	 *
@@ -1282,7 +1282,7 @@ public class Database {
 	 * @return the generated lesson identifier
 	 * @throws SQLException when the lesson cannot be inserted
 	 */
-	public long createLesson(LessonLearned lesson) throws SQLException {
+	public long createLesson(LessonsLearned lesson) throws SQLException {
 		String query = "INSERT INTO lessons (lessonOwner, title, problemSituation, lessonText, " +
 				"lessonLocked, titleLocked, problemLocked, lessonTextLocked) " +
 				"VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
@@ -1306,13 +1306,13 @@ public class Database {
 	}
 
 	/*******
-	 * <p> Method: LessonLearned getLesson(long id) </p>
+	 * <p> Method: LessonsLearned getLesson(long id) </p>
 	 *
 	 * @param id specifies the lesson identifier
 	 * @return the lesson, or null when it does not exist
 	 * @throws SQLException when the lesson cannot be read
 	 */
-	public LessonLearned getLesson(long id) throws SQLException {
+	public LessonsLearned getLesson(long id) throws SQLException {
 		String query = "SELECT id, lessonOwner, title, problemSituation, lessonText, " +
 				"lessonLocked, titleLocked, problemLocked, lessonTextLocked " +
 				"FROM lessons WHERE id = ?";
@@ -1326,7 +1326,29 @@ public class Database {
 	}
 
 	/*******
-	 * <p> Method: List&lt;LessonLearned&gt; getLessonsByOwner(String owner) </p>
+	 * <p> Method: List&lt;LessonsLearned&gt; getAllLessons() </p>
+	 *
+	 * <p> Description: Read the persistent system-wide lesson list for trusted system workflows.
+	 * Contributor-facing code uses {@link #getLessonsByOwner(String)} so one contributor never
+	 * receives another contributor's submissions.</p>
+	 *
+	 * @return every stored lesson ordered by identifier
+	 * @throws SQLException when the list cannot be read
+	 */
+	public List<LessonsLearned> getAllLessons() throws SQLException {
+		List<LessonsLearned> lessons = new ArrayList<LessonsLearned>();
+		String query = "SELECT id, lessonOwner, title, problemSituation, lessonText, " +
+				"lessonLocked, titleLocked, problemLocked, lessonTextLocked " +
+				"FROM lessons ORDER BY id";
+		try (PreparedStatement pstmt = connection.prepareStatement(query);
+				ResultSet rs = pstmt.executeQuery()) {
+			while (rs.next()) lessons.add(lessonFromResult(rs));
+		}
+		return lessons;
+	}
+
+	/*******
+	 * <p> Method: List&lt;LessonsLearned&gt; getLessonsByOwner(String owner) </p>
 	 *
 	 * <p> Description: Read only the lessons owned by one contributor.  This ownership condition
 	 * is part of the SQL query so another contributor's content never enters the returned list.</p>
@@ -1335,8 +1357,8 @@ public class Database {
 	 * @return all matching lessons ordered by identifier
 	 * @throws SQLException when the list cannot be read
 	 */
-	public List<LessonLearned> getLessonsByOwner(String owner) throws SQLException {
-		List<LessonLearned> lessons = new ArrayList<LessonLearned>();
+	public List<LessonsLearned> getLessonsByOwner(String owner) throws SQLException {
+		List<LessonsLearned> lessons = new ArrayList<LessonsLearned>();
 		String query = "SELECT id, lessonOwner, title, problemSituation, lessonText, " +
 				"lessonLocked, titleLocked, problemLocked, lessonTextLocked " +
 				"FROM lessons WHERE lessonOwner = ? ORDER BY id";
@@ -1350,13 +1372,13 @@ public class Database {
 	}
 
 	/*******
-	 * <p> Method: boolean updateLesson(LessonLearned lesson) </p>
+	 * <p> Method: boolean updateLesson(LessonsLearned lesson) </p>
 	 *
 	 * @param lesson specifies the validated values and existing identifier
 	 * @return true when exactly one lesson was changed
 	 * @throws SQLException when the update cannot be completed
 	 */
-	public boolean updateLesson(LessonLearned lesson) throws SQLException {
+	public boolean updateLesson(LessonsLearned lesson) throws SQLException {
 		String query = "UPDATE lessons SET title = ?, problemSituation = ?, lessonText = ? " +
 				"WHERE id = ? AND lessonOwner = ?";
 		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
@@ -1623,8 +1645,8 @@ public class Database {
 		}
 	}
 
-	private LessonLearned lessonFromResult(ResultSet rs) throws SQLException {
-		return new LessonLearned(rs.getLong("id"), rs.getString("lessonOwner"),
+	private LessonsLearned lessonFromResult(ResultSet rs) throws SQLException {
+		return new LessonsLearned(rs.getLong("id"), rs.getString("lessonOwner"),
 				rs.getString("title"), rs.getString("problemSituation"),
 				rs.getString("lessonText"), rs.getBoolean("lessonLocked"),
 				rs.getBoolean("titleLocked"), rs.getBoolean("problemLocked"),

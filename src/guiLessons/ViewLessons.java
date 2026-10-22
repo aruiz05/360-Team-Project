@@ -1,7 +1,7 @@
 package guiLessons;
 
-import entityClasses.LessonLearned;
-import entityClasses.LessonsCollection;
+import entityClasses.LessonsLearned;
+import entityClasses.LessonsLearnedList;
 import entityClasses.User;
 import javafx.beans.property.ReadOnlyLongWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
@@ -38,8 +38,8 @@ public class ViewLessons {
 	private static final Label labelUser = new Label();
 	private static final Label labelStatus = new Label();
 	protected static final TextField fieldFilter = new TextField();
-	protected static final TableView<LessonLearned> tableLessons =
-			new TableView<LessonLearned>();
+	protected static final TableView<LessonsLearned> tableLessons =
+			new TableView<LessonsLearned>();
 	private static final Button buttonFilter = new Button("Apply Filter");
 	private static final Button buttonClear = new Button("Show All");
 	private static final Button buttonCreate = new Button("Create");
@@ -87,20 +87,20 @@ public class ViewLessons {
 		setupButton(buttonFilter, 125, 365, 84);
 		setupButton(buttonClear, 125, 505, 84);
 
-		TableColumn<LessonLearned, Number> id = new TableColumn<LessonLearned, Number>("ID");
+		TableColumn<LessonsLearned, Number> id = new TableColumn<LessonsLearned, Number>("ID");
 		id.setCellValueFactory(data -> new ReadOnlyLongWrapper(data.getValue().getId()));
 		id.setPrefWidth(70);
-		TableColumn<LessonLearned, String> title =
-				new TableColumn<LessonLearned, String>("Title");
+		TableColumn<LessonsLearned, String> title =
+				new TableColumn<LessonsLearned, String>("Title");
 		title.setCellValueFactory(data -> new ReadOnlyStringWrapper(data.getValue().getTitle()));
 		title.setPrefWidth(260);
-		TableColumn<LessonLearned, String> problem =
-				new TableColumn<LessonLearned, String>("Problem or Situation");
+		TableColumn<LessonsLearned, String> problem =
+				new TableColumn<LessonsLearned, String>("Problem or Situation");
 		problem.setCellValueFactory(data ->
 				new ReadOnlyStringWrapper(data.getValue().getProblemSituation()));
 		problem.setPrefWidth(300);
-		TableColumn<LessonLearned, String> locked =
-				new TableColumn<LessonLearned, String>("Lock Status");
+		TableColumn<LessonsLearned, String> locked =
+				new TableColumn<LessonsLearned, String>("Lock Status");
 		locked.setCellValueFactory(data -> new ReadOnlyStringWrapper(
 				data.getValue().hasAnyLockedField() ? "Locked field(s)" : "Editable"));
 		locked.setPrefWidth(130);
@@ -147,13 +147,13 @@ public class ViewLessons {
 	 * @param lessons specifies the full list or filtered subset to display
 	 * @param message describes the collection result
 	 */
-	protected static void setLessons(LessonsCollection lessons, String message) {
+	protected static void setLessons(LessonsLearnedList lessons, String message) {
 		tableLessons.setItems(FXCollections.observableArrayList(lessons.getLessons()));
 		labelStatus.setText(message);
 	}
 
 	/** @return the lesson currently selected in the table, or null when none is selected */
-	protected static LessonLearned getSelectedLesson() {
+	protected static LessonsLearned getSelectedLesson() {
 		return tableLessons.getSelectionModel().getSelectedItem();
 	}
 

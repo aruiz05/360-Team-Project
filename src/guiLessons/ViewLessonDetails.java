@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import entityClasses.ExperienceRecord;
-import entityClasses.LessonLearned;
+import entityClasses.LessonsLearned;
 import entityClasses.TeamMemberEffort;
 import entityClasses.User;
 import javafx.beans.property.ReadOnlyLongWrapper;
@@ -57,7 +57,7 @@ public class ViewLessonDetails {
 	private static ViewLessonDetails theView;
 	protected static Stage theStage;
 	protected static User theUser;
-	protected static LessonLearned currentLesson;
+	protected static LessonsLearned currentLesson;
 	private static Scene scene;
 
 	/**********
@@ -65,7 +65,7 @@ public class ViewLessonDetails {
 	 * @param user specifies the signed-in contributor
 	 * @param lesson specifies the selected contributor-owned lesson
 	 */
-	public static void displayLessonDetails(Stage stage, User user, LessonLearned lesson) {
+	public static void displayLessonDetails(Stage stage, User user, LessonsLearned lesson) {
 		theStage = stage;
 		theUser = user;
 		currentLesson = lesson;
@@ -158,7 +158,7 @@ public class ViewLessonDetails {
 	}
 
 	/** @param lesson specifies the current contributor-visible lesson and lock state */
-	protected static void setLesson(LessonLearned lesson) {
+	protected static void setLesson(LessonsLearned lesson) {
 		currentLesson = lesson;
 		labelIdentity.setText("Lesson ID: " + lesson.getId() + "   Owner: " + lesson.getOwner());
 		textTitle.setText(lesson.getTitle());

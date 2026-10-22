@@ -2,7 +2,7 @@ package guiLessons;
 
 import java.util.Optional;
 
-import entityClasses.LessonLearned;
+import entityClasses.LessonsLearned;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import lessonManagement.LessonDraft;
@@ -24,7 +24,7 @@ public class ControllerLessons {
 
 	/** Refresh the full contributor list or the currently requested title subset. */
 	protected static void performRefresh() {
-		OperationResult<entityClasses.LessonsCollection> result = ModelLessons.list(
+		OperationResult<entityClasses.LessonsLearnedList> result = ModelLessons.list(
 				ViewLessons.theUser.getUserName(), ViewLessons.fieldFilter.getText());
 		if (result.isSuccessful()) ViewLessons.setLessons(result.getValue(), result.getMessage());
 		else ViewLessons.showError(result.getMessage());
@@ -34,7 +34,7 @@ public class ControllerLessons {
 	protected static void performCreate() {
 		Optional<LessonDraft> draft = LessonEditorDialog.show(null);
 		if (draft.isEmpty()) return;
-		OperationResult<LessonLearned> result = ModelLessons.create(
+		OperationResult<LessonsLearned> result = ModelLessons.create(
 				ViewLessons.theUser.getUserName(), draft.get());
 		if (!result.isSuccessful()) {
 			ViewLessons.showError(result.getMessage());
@@ -46,9 +46,9 @@ public class ControllerLessons {
 
 	/** Open the selected contributor-owned lesson and its experience records. */
 	protected static void performView() {
-		LessonLearned selected = selected();
+		LessonsLearned selected = selected();
 		if (selected == null) return;
-		OperationResult<LessonLearned> result = ModelLessons.read(
+		OperationResult<LessonsLearned> result = ModelLessons.read(
 				ViewLessons.theUser.getUserName(), selected.getId());
 		if (!result.isSuccessful()) {
 			ViewLessons.showError(result.getMessage());
@@ -61,9 +61,9 @@ public class ControllerLessons {
 
 	/** Open the editor for the selected lesson and submit its unlocked values. */
 	protected static void performEdit() {
-		LessonLearned selected = selected();
+		LessonsLearned selected = selected();
 		if (selected == null) return;
-		OperationResult<LessonLearned> current = ModelLessons.read(
+		OperationResult<LessonsLearned> current = ModelLessons.read(
 				ViewLessons.theUser.getUserName(), selected.getId());
 		if (!current.isSuccessful()) {
 			ViewLessons.showError(current.getMessage());
@@ -72,7 +72,7 @@ public class ControllerLessons {
 		}
 		Optional<LessonDraft> draft = LessonEditorDialog.show(current.getValue());
 		if (draft.isEmpty()) return;
-		OperationResult<LessonLearned> result = ModelLessons.update(
+		OperationResult<LessonsLearned> result = ModelLessons.update(
 				ViewLessons.theUser.getUserName(), selected.getId(), draft.get());
 		if (!result.isSuccessful()) {
 			ViewLessons.showError(result.getMessage());
@@ -84,7 +84,7 @@ public class ControllerLessons {
 
 	/** Confirm and request deletion of the selected unlocked lesson. */
 	protected static void performDelete() {
-		LessonLearned selected = selected();
+		LessonsLearned selected = selected();
 		if (selected == null) return;
 		Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
 				"Delete lesson " + selected.getId() + " and all of its experience records?",
@@ -119,8 +119,8 @@ public class ControllerLessons {
 		System.exit(0);
 	}
 
-	private static LessonLearned selected() {
-		LessonLearned lesson = ViewLessons.getSelectedLesson();
+	private static LessonsLearned selected() {
+		LessonsLearned lesson = ViewLessons.getSelectedLesson();
 		if (lesson == null) ViewLessons.showError("Select a lesson.");
 		return lesson;
 	}

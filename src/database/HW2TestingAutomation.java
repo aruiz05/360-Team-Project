@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.UUID;
 
 import entityClasses.ExperienceRecord;
-import entityClasses.LessonLearned;
-import entityClasses.LessonsCollection;
+import entityClasses.LessonsLearned;
+import entityClasses.LessonsLearnedList;
 import entityClasses.TeamMemberEffort;
 import lessonManagement.EffortInput;
 import lessonManagement.ExperienceDraft;
@@ -145,11 +145,11 @@ public class HW2TestingAutomation {
 
 	private static void testCreateValidLesson() throws Exception {
 		try (TestContext context = context("test1")) {
-			LessonLearned created = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
+			LessonsLearned created = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
 			check(created.getId() > 0, "Database assigned a positive unique ID.");
 			check(OWNER_A.equals(created.getOwner()), "Owner A was saved.");
 			checkLessonFields(created, SAMPLE_LESSON);
-			LessonLearned read = success(context.service.readLesson(id(created), OWNER_A));
+			LessonsLearned read = success(context.service.readLesson(id(created), OWNER_A));
 			check(read.getId() == created.getId(), "Read returned the saved ID.");
 			check(success(context.service.listLessons(OWNER_A)).findById(created.getId()) != null,
 					"A's list contains the saved lesson.");
@@ -177,9 +177,9 @@ public class HW2TestingAutomation {
 
 	private static void testKeepSimilarLessonsSeparate() throws Exception {
 		try (TestContext context = context("test3")) {
-			LessonLearned first = createLesson(context, OWNER_A, "Same title", "First problem",
+			LessonsLearned first = createLesson(context, OWNER_A, "Same title", "First problem",
 					"First lesson text");
-			LessonLearned second = createLesson(context, OWNER_A, "Same title", "Second problem",
+			LessonsLearned second = createLesson(context, OWNER_A, "Same title", "Second problem",
 					"Second lesson text");
 			check(first.getId() != second.getId(), "Duplicate titles received separate IDs.");
 			check("First lesson text".equals(success(context.service.readLesson(
@@ -193,12 +193,12 @@ public class HW2TestingAutomation {
 
 	private static void testReadSavedLesson() throws Exception {
 		try (TestContext context = context("test4")) {
-			LessonLearned lesson = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
+			LessonsLearned lesson = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
 			ExperienceDraft draft = experience("Changed the module path", "Used Eclipse settings",
 					"30", effort("Adan", "20"), effort("Mahin", "10"));
 			ExperienceRecord saved = success(context.service.createExperience(
 					id(lesson), OWNER_A, draft));
-			LessonLearned read = success(context.service.readLesson(id(lesson), OWNER_A));
+			LessonsLearned read = success(context.service.readLesson(id(lesson), OWNER_A));
 			checkLessonFields(read, SAMPLE_LESSON);
 			List<ExperienceRecord> records = success(context.service.listExperiences(
 					id(lesson), OWNER_A));
@@ -212,11 +212,11 @@ public class HW2TestingAutomation {
 
 	private static void testShowEmptyList() throws Exception {
 		try (TestContext context = context("test5")) {
-			OperationResult<LessonsCollection> empty = context.service.listLessons(OWNER_A);
+			OperationResult<LessonsLearnedList> empty = context.service.listLessons(OWNER_A);
 			check(success(empty).isEmpty(), "Contributor with no records receives an empty list.");
 			check("No lessons found.".equals(empty.getMessage()), "Empty list message is helpful.");
 			createLesson(context, OWNER_A, "Database indexing", "Slow query", "Add an index");
-			OperationResult<LessonsCollection> noMatch = context.service.filterLessons(
+			OperationResult<LessonsLearnedList> noMatch = context.service.filterLessons(
 					OWNER_A, "JavaFX");
 			check(success(noMatch).isEmpty(), "No-match filter returns an empty subset.");
 			check("No lessons found.".equals(noMatch.getMessage()),
@@ -226,9 +226,9 @@ public class HW2TestingAutomation {
 
 	private static void testShowOneAndManyLessons() throws Exception {
 		try (TestContext context = context("test6")) {
-			LessonLearned only = createLesson(context, OWNER_A, "Solo marker",
+			LessonsLearned only = createLesson(context, OWNER_A, "Solo marker",
 					"One-record problem", "One-record lesson");
-			LessonsCollection one = success(context.service.listLessons(OWNER_A));
+			LessonsLearnedList one = success(context.service.listLessons(OWNER_A));
 			check(one.size() == 1 && one.findById(only.getId()) != null,
 					"One-item collection preserves its ID.");
 
@@ -236,19 +236,19 @@ public class HW2TestingAutomation {
 			expectedIds.add(only.getId());
 			for (int index = 1; index < 250; index++) {
 				String marker = index % 25 == 0 ? " selected" : "";
-				LessonLearned created = createLesson(context, OWNER_A,
+				LessonsLearned created = createLesson(context, OWNER_A,
 						"Lesson " + index + marker, "Problem " + index, "Learning " + index);
 				expectedIds.add(created.getId());
 			}
-			LessonsCollection many = success(context.service.listLessons(OWNER_A));
+			LessonsLearnedList many = success(context.service.listLessons(OWNER_A));
 			check(many.size() == 250, "Collection holds all 250 prepared lessons.");
 			for (long id : expectedIds)
 				check(many.findById(id) != null, "Prepared lesson ID " + id + " remains present.");
-			LessonsCollection oneItem = success(context.service.filterLessons(OWNER_A,
+			LessonsLearnedList oneItem = success(context.service.filterLessons(OWNER_A,
 					"Solo marker"));
 			check(oneItem.size() == 1 && oneItem.findById(only.getId()) != null,
 					"A one-item subset contains the expected ID.");
-			LessonsCollection multiple = success(context.service.filterLessons(OWNER_A,
+			LessonsLearnedList multiple = success(context.service.filterLessons(OWNER_A,
 					"selected"));
 			check(multiple.size() == 9, "Multiple-item subset contains all nine matches.");
 			check(many.getLessons() instanceof List<?>,
@@ -258,14 +258,18 @@ public class HW2TestingAutomation {
 
 	private static void testKeepContributorContentPrivate() throws Exception {
 		try (TestContext context = context("test7")) {
-			LessonLearned aOne = createLesson(context, OWNER_A, "A Java lesson", "A problem", "A1");
-			LessonLearned aTwo = createLesson(context, OWNER_A, "A database lesson", "A problem", "A2");
-			LessonLearned b = createLesson(context, OWNER_B, "B Java lesson", "B problem", "B1");
-			LessonsCollection full = success(context.service.listLessons(OWNER_A));
+			LessonsLearned aOne = createLesson(context, OWNER_A, "A Java lesson", "A problem", "A1");
+			LessonsLearned aTwo = createLesson(context, OWNER_A, "A database lesson", "A problem", "A2");
+			LessonsLearned b = createLesson(context, OWNER_B, "B Java lesson", "B problem", "B1");
+			LessonsLearnedList systemList = success(
+					LessonsLearnedList.readAll(context.database));
+			check(systemList.size() == 3,
+					"The trusted system list contains all three stored lessons.");
+			LessonsLearnedList full = success(context.service.listLessons(OWNER_A));
 			check(full.size() == 2 && full.findById(aOne.getId()) != null &&
 					full.findById(aTwo.getId()) != null && full.findById(b.getId()) == null,
 					"A's full list includes only A's two lessons.");
-			LessonsCollection subset = success(context.service.filterLessons(OWNER_A, "Java"));
+			LessonsLearnedList subset = success(context.service.filterLessons(OWNER_A, "Java"));
 			check(subset.size() == 1 && subset.findById(aOne.getId()) != null,
 					"A's subset does not expose B's matching title.");
 			assertFailure(context.service.readLesson(id(b), OWNER_A),
@@ -275,7 +279,7 @@ public class HW2TestingAutomation {
 
 	private static void testShowEditedContentAndLockStatus() throws Exception {
 		try (TestContext context = context("test8")) {
-			LessonLearned original = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
+			LessonsLearned original = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
 			check(context.database.updateLessonCoreForTesting(original.getId(),
 					"Curator approved title", "Curator clarified problem",
 					"Curator clarified lesson"), "Curator edit was seeded.");
@@ -283,13 +287,13 @@ public class HW2TestingAutomation {
 					false, false), "Title lock was seeded.");
 			check(context.database.setHiddenRoleInformationForTesting(original.getId(),
 					"Internal curator note"), "Separate role information was seeded.");
-			LessonLearned visible = success(context.service.readLesson(id(original), OWNER_A));
+			LessonsLearned visible = success(context.service.readLesson(id(original), OWNER_A));
 			check("Curator approved title".equals(visible.getTitle()) &&
 					"Curator clarified problem".equals(visible.getProblemSituation()) &&
 					"Curator clarified lesson".equals(visible.getLessonLearned()),
 					"Contributor sees curator-edited core content.");
 			check(visible.isTitleLocked(), "Contributor-visible record marks the title as locked.");
-			boolean exposesHiddenField = Arrays.stream(LessonLearned.class.getMethods())
+			boolean exposesHiddenField = Arrays.stream(LessonsLearned.class.getMethods())
 					.anyMatch(method -> method.getName().toLowerCase().contains("hiddenrole"));
 			check(!exposesHiddenField, "Contributor lesson API does not expose other-role data.");
 			check("Internal curator note".equals(context.database
@@ -311,17 +315,17 @@ public class HW2TestingAutomation {
 
 	private static void testUpdateValidCoreInformation() throws Exception {
 		try (TestContext context = context("test10")) {
-			LessonLearned original = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
+			LessonsLearned original = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
 			LessonDraft changed = new LessonDraft("Diagnosing JavaFX startup",
 					"The application failed after an SDK update",
 					"Verify both module path and VM arguments.");
-			LessonLearned updated = success(context.service.updateLesson(id(original), OWNER_A,
+			LessonsLearned updated = success(context.service.updateLesson(id(original), OWNER_A,
 					changed));
 			check(updated.getId() == original.getId(), "Update retained the lesson ID.");
 			check(updated.getOwner().equals(original.getOwner()), "Update retained the owner.");
 			checkLessonFields(updated, changed);
 			checkLessonFields(success(context.service.readLesson(id(original), OWNER_A)), changed);
-			LessonsCollection subset = success(context.service.filterLessons(OWNER_A, "Diagnosing"));
+			LessonsLearnedList subset = success(context.service.filterLessons(OWNER_A, "Diagnosing"));
 			check(subset.size() == 1 && subset.findById(original.getId()) != null,
 					"Refreshed subset contains the updated lesson.");
 		}
@@ -329,7 +333,7 @@ public class HW2TestingAutomation {
 
 	private static void testRejectInvalidEdits() throws Exception {
 		try (TestContext context = context("test11")) {
-			LessonLearned original = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
+			LessonsLearned original = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
 			String[] invalid = {null, "", "   "};
 			for (String value : invalid) {
 				assertFailure(context.service.updateLesson(id(original), OWNER_A,
@@ -353,20 +357,20 @@ public class HW2TestingAutomation {
 
 	private static void testRejectLockedEdits() throws Exception {
 		try (TestContext context = context("test12")) {
-			LessonLearned fieldLocked = createLesson(context, OWNER_A, "Locked title",
+			LessonsLearned fieldLocked = createLesson(context, OWNER_A, "Locked title",
 					"Editable problem", "Editable lesson");
 			check(context.database.setLessonLocksForTesting(fieldLocked.getId(), false, true,
 					false, false), "Field lock was seeded.");
 			assertFailure(context.service.updateLesson(id(fieldLocked), OWNER_A,
 					new LessonDraft("Changed title", "Editable problem", "Editable lesson")),
 					"This field is locked and cannot be edited.");
-			LessonLearned permitted = success(context.service.updateLesson(id(fieldLocked), OWNER_A,
+			LessonsLearned permitted = success(context.service.updateLesson(id(fieldLocked), OWNER_A,
 					new LessonDraft("Locked title", "Improved unlocked problem", "Editable lesson")));
 			check("Locked title".equals(permitted.getTitle()) &&
 					"Improved unlocked problem".equals(permitted.getProblemSituation()),
 					"Unlocked field changed without changing the locked title.");
 
-			LessonLearned wholeLocked = createLesson(context, OWNER_A, "Whole lock",
+			LessonsLearned wholeLocked = createLesson(context, OWNER_A, "Whole lock",
 					"Whole problem", "Whole lesson");
 			check(context.database.setLessonLocksForTesting(wholeLocked.getId(), true, false,
 					false, false), "Whole-lesson lock was seeded.");
@@ -378,7 +382,7 @@ public class HW2TestingAutomation {
 
 	private static void testRejectUnavailableUpdateTargets() throws Exception {
 		try (TestContext context = context("test13")) {
-			LessonLearned b = createLesson(context, OWNER_B, "B title", "B problem", "B lesson");
+			LessonsLearned b = createLesson(context, OWNER_B, "B title", "B problem", "B lesson");
 			LessonDraft change = new LessonDraft("Changed", "Changed", "Changed");
 			assertFailure(context.service.updateLesson(id(b), OWNER_A, change),
 					"You can only edit your own lessons.");
@@ -387,7 +391,7 @@ public class HW2TestingAutomation {
 					"Lesson ID must be a valid number.");
 			assertFailure(context.service.updateLesson("999999", OWNER_A, change),
 					"Lesson not found. Refresh the list.");
-			LessonLearned retained = context.database.getLesson(b.getId());
+			LessonsLearned retained = context.database.getLesson(b.getId());
 			check("B title".equals(retained.getTitle()), "Rejected updates preserved B's record.");
 			check(context.database.getLessonCount() == 1, "Rejected updates changed no counts.");
 		}
@@ -395,7 +399,7 @@ public class HW2TestingAutomation {
 
 	private static void testCreateAndReadExperiences() throws Exception {
 		try (TestContext context = context("test14")) {
-			LessonLearned lesson = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
+			LessonsLearned lesson = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
 			ExperienceRecord first = success(context.service.createExperience(id(lesson), OWNER_A,
 					experience("Updated dependencies", "Used Eclipse Build Path", "30",
 							effort("Adan", "20"), effort("Aditi", "10"))));
@@ -416,7 +420,7 @@ public class HW2TestingAutomation {
 
 	private static void testUpdateExperience() throws Exception {
 		try (TestContext context = context("test15")) {
-			LessonLearned lesson = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
+			LessonsLearned lesson = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
 			ExperienceRecord first = createExperience(context, lesson, "First attempt", "First method",
 					"10", effort("Adan", "10"));
 			ExperienceRecord second = createExperience(context, lesson, "Second attempt", "Second method",
@@ -443,7 +447,7 @@ public class HW2TestingAutomation {
 
 	private static void testDeleteExperiences() throws Exception {
 		try (TestContext context = context("test16")) {
-			LessonLearned lesson = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
+			LessonsLearned lesson = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
 			ExperienceRecord first = createExperience(context, lesson, "First", "Method 1", "10",
 					effort("Adan", "10"));
 			ExperienceRecord second = createExperience(context, lesson, "Second", "Method 2", "20",
@@ -462,7 +466,7 @@ public class HW2TestingAutomation {
 
 	private static void testRejectInvalidExperienceInput() throws Exception {
 		try (TestContext context = context("test17")) {
-			LessonLearned lesson = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
+			LessonsLearned lesson = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
 			ExperienceRecord saved = createExperience(context, lesson, "Original what", "Original how",
 					"10", effort("Adan", "10"));
 			String[] textInvalid = {null, "", "   "};
@@ -513,13 +517,13 @@ public class HW2TestingAutomation {
 			assertFailure(context.service.createExperience("999999", OWNER_A, valid),
 					"Lesson not found.");
 
-			LessonLearned bLesson = createLesson(context, OWNER_B, "B lesson", "B problem", "B lesson");
+			LessonsLearned bLesson = createLesson(context, OWNER_B, "B lesson", "B problem", "B lesson");
 			ExperienceRecord bRecord = createExperience(context, bLesson, "B what", "B how", "6",
 					effort("B", "6"));
 			assertFailure(context.service.updateExperience(id(bRecord), OWNER_A, valid),
 					"You can only manage your own experience records.");
 
-			LessonLearned aLesson = createLesson(context, OWNER_A, "A lesson", "A problem", "A lesson");
+			LessonsLearned aLesson = createLesson(context, OWNER_A, "A lesson", "A problem", "A lesson");
 			ExperienceRecord lockedField = createExperience(context, aLesson, "Locked what", "How", "7",
 					effort("Adan", "7"));
 			check(context.database.setExperienceLocksForTesting(lockedField.getId(), false, true,
@@ -550,16 +554,16 @@ public class HW2TestingAutomation {
 
 	private static void testDeleteUnlockedLesson() throws Exception {
 		try (TestContext context = context("test19")) {
-			LessonLearned removed = createLesson(context, OWNER_A, "Delete marker lesson",
+			LessonsLearned removed = createLesson(context, OWNER_A, "Delete marker lesson",
 					"Temporary problem", "Temporary lesson");
 			createExperience(context, removed, "Attempt 1", "Method 1", "4", effort("Adan", "4"));
 			createExperience(context, removed, "Attempt 2", "Method 2", "5", effort("Adan", "5"));
-			LessonLearned retained = createLesson(context, OWNER_A, "Retained lesson",
+			LessonsLearned retained = createLesson(context, OWNER_A, "Retained lesson",
 					"Permanent problem", "Permanent lesson");
 			success(context.service.deleteLesson(id(removed), OWNER_A));
 			assertFailure(context.service.readLesson(id(removed), OWNER_A),
 					"Lesson not found. Refresh the list.");
-			LessonsCollection full = success(context.service.listLessons(OWNER_A));
+			LessonsLearnedList full = success(context.service.listLessons(OWNER_A));
 			check(full.size() == 1 && full.findById(retained.getId()) != null &&
 					full.findById(removed.getId()) == null,
 					"Full list removed only the selected lesson.");
@@ -574,14 +578,14 @@ public class HW2TestingAutomation {
 
 	private static void testRejectLockedLessonDeletion() throws Exception {
 		try (TestContext context = context("test20")) {
-			LessonLearned whole = createLesson(context, OWNER_A, "Whole lock", "Problem", "Lesson");
+			LessonsLearned whole = createLesson(context, OWNER_A, "Whole lock", "Problem", "Lesson");
 			ExperienceRecord wholeChild = createExperience(context, whole, "What", "How", "1",
 					effort("Adan", "1"));
 			context.database.setLessonLocksForTesting(whole.getId(), true, false, false, false);
 			assertFailure(context.service.deleteLesson(id(whole), OWNER_A),
 					"This lesson or one of its fields is locked and cannot be deleted.");
 
-			LessonLearned field = createLesson(context, OWNER_A, "Field lock", "Problem", "Lesson");
+			LessonsLearned field = createLesson(context, OWNER_A, "Field lock", "Problem", "Lesson");
 			ExperienceRecord fieldChild = createExperience(context, field, "What", "How", "2",
 					effort("Adan", "2"));
 			context.database.setLessonLocksForTesting(field.getId(), false, false, true, false);
@@ -597,7 +601,7 @@ public class HW2TestingAutomation {
 
 	private static void testRejectUnavailableDeletionTargets() throws Exception {
 		try (TestContext context = context("test21")) {
-			LessonLearned b = createLesson(context, OWNER_B, "B title", "B problem", "B lesson");
+			LessonsLearned b = createLesson(context, OWNER_B, "B title", "B problem", "B lesson");
 			assertFailure(context.service.deleteLesson(id(b), OWNER_A),
 					"You can only delete your own lessons.");
 			assertFailure(context.service.deleteLesson("", OWNER_A), "Select a lesson.");
@@ -613,35 +617,41 @@ public class HW2TestingAutomation {
 
 	private static void testRefreshCollections() throws Exception {
 		try (TestContext context = context("test22")) {
-			LessonLearned unrelated = createLesson(context, OWNER_A, "Unrelated database lesson",
-					"Problem", "Lesson");
-			check(success(context.service.filterLessons(OWNER_A, "JavaFX marker")).isEmpty(),
-					"Initial selected subset is empty.");
-			LessonLearned matching = createLesson(context, OWNER_A, "JavaFX marker lesson",
-					"Problem", "Lesson");
-			LessonsCollection afterCreate = success(context.service.filterLessons(OWNER_A,
-					"JavaFX marker"));
-			check(afterCreate.size() == 1 && afterCreate.findById(matching.getId()) != null,
-					"Created matching lesson appears once in rebuilt subset.");
-			success(context.service.updateLesson(id(matching), OWNER_A,
+			LessonsLearnedList full = success(LessonsLearnedList.readForContributor(
+					context.database, OWNER_A));
+			LessonsLearned unrelated = success(full.create(context.database, OWNER_A,
+					new LessonDraft("Unrelated database lesson", "Problem", "Lesson")));
+			LessonsLearnedList subset = full.filterByKeywords("JavaFX marker");
+			check(subset.isEmpty(), "Initial selected subset is empty.");
+
+			LessonsLearned matching = success(full.create(context.database, OWNER_A,
+					new LessonDraft("JavaFX database marker lesson", "Problem", "Lesson")));
+			check(full.size() == 2 && full.findById(matching.getId()) != null,
+					"Collection create adds one current lesson to the full list.");
+			check(subset.size() == 1 && subset.findById(matching.getId()) != null,
+					"A shared subset immediately includes a newly matching lesson.");
+			check(full.filterByKeywords("database JavaFX").size() == 1,
+					"A set of title keywords matches in any order.");
+
+			success(subset.update(context.database, matching.getId(), OWNER_A,
 					new LessonDraft("Renamed lesson", "Problem", "Lesson")));
+			check(subset.isEmpty(),
+					"Collection update removes a lesson that no longer matches the subset.");
+			check(full.size() == 2 &&
+					"Renamed lesson".equals(full.findById(matching.getId()).getTitle()),
+					"The shared full list contains one current copy after the edit.");
+
+			success(full.delete(context.database, matching.getId(), OWNER_A));
+			check(full.size() == 1 && full.findById(unrelated.getId()) != null &&
+					full.findById(matching.getId()) == null,
+					"Collection delete retains only the unrelated current record.");
+			check(subset.isEmpty(), "The shared subset remains empty without stale entries.");
 			check(success(context.service.filterLessons(OWNER_A, "JavaFX marker")).isEmpty(),
-					"Edited lesson leaves the no-longer-matching subset.");
-			LessonsCollection fullAfterEdit = success(context.service.listLessons(OWNER_A));
-			check(fullAfterEdit.size() == 2 &&
-					"Renamed lesson".equals(fullAfterEdit.findById(matching.getId()).getTitle()),
-					"Full list contains one current copy after the edit.");
-			success(context.service.deleteLesson(id(matching), OWNER_A));
-			LessonsCollection finalFull = success(context.service.listLessons(OWNER_A));
-			check(finalFull.size() == 1 && finalFull.findById(unrelated.getId()) != null &&
-					finalFull.findById(matching.getId()) == null,
-					"Final full list retains only the unrelated current record.");
-			check(success(context.service.filterLessons(OWNER_A, "JavaFX marker")).isEmpty(),
-					"Final subset remains empty without stale entries.");
+					"A fresh persistent subset agrees with the maintained collection.");
 		}
 	}
 
-	private static void verifyInvalidExperienceCreate(TestContext context, LessonLearned lesson,
+	private static void verifyInvalidExperienceCreate(TestContext context, LessonsLearned lesson,
 			ExperienceDraft draft, String expectedMessage) throws Exception {
 		int before = context.database.getExperienceCount();
 		assertFailure(context.service.createExperience(id(lesson), OWNER_A, draft), expectedMessage);
@@ -717,13 +727,13 @@ public class HW2TestingAutomation {
 		return new TestContext(database);
 	}
 
-	private static LessonLearned createLesson(TestContext context, String owner, String title,
+	private static LessonsLearned createLesson(TestContext context, String owner, String title,
 			String problem, String lessonText) {
 		return success(context.service.createLesson(owner,
 				new LessonDraft(title, problem, lessonText)));
 	}
 
-	private static ExperienceRecord createExperience(TestContext context, LessonLearned lesson,
+	private static ExperienceRecord createExperience(TestContext context, LessonsLearned lesson,
 			String what, String how, String elapsed, EffortInput... efforts) {
 		return success(context.service.createExperience(id(lesson), lesson.getOwner(),
 				experience(what, how, elapsed, efforts)));
@@ -739,7 +749,7 @@ public class HW2TestingAutomation {
 		return new EffortInput(member, value);
 	}
 
-	private static String id(LessonLearned lesson) {
+	private static String id(LessonsLearned lesson) {
 		return Long.toString(lesson.getId());
 	}
 
@@ -759,9 +769,9 @@ public class HW2TestingAutomation {
 				"Message matched: " + expectedMessage + " Actual: " + result.getMessage());
 	}
 
-	private static void assertLessonUnchanged(TestContext context, LessonLearned expected)
+	private static void assertLessonUnchanged(TestContext context, LessonsLearned expected)
 			throws Exception {
-		LessonLearned actual = context.database.getLesson(expected.getId());
+		LessonsLearned actual = context.database.getLesson(expected.getId());
 		check(actual != null && actual.getOwner().equals(expected.getOwner()) &&
 				actual.getTitle().equals(expected.getTitle()) &&
 				actual.getProblemSituation().equals(expected.getProblemSituation()) &&
@@ -769,7 +779,7 @@ public class HW2TestingAutomation {
 				"Rejected lesson edit preserved all original values.");
 	}
 
-	private static void checkLessonFields(LessonLearned lesson, LessonDraft expected) {
+	private static void checkLessonFields(LessonsLearned lesson, LessonDraft expected) {
 		check(expected.getTitle().equals(lesson.getTitle()), "Lesson title matches.");
 		check(expected.getProblemSituation().equals(lesson.getProblemSituation()),
 				"Problem or situation matches.");

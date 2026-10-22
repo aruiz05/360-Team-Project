@@ -2,7 +2,7 @@ package guiLessons;
 
 import java.util.Optional;
 
-import entityClasses.LessonLearned;
+import entityClasses.LessonsLearned;
 import javafx.geometry.Insets;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
@@ -31,7 +31,7 @@ public class LessonEditorDialog {
 	 * @param existing specifies the lesson being edited, or null when creating
 	 * @return the proposed values when Save is selected
 	 */
-	public static Optional<LessonDraft> show(LessonLearned existing) {
+	public static Optional<LessonDraft> show(LessonsLearned existing) {
 		Dialog<LessonDraft> dialog = new Dialog<LessonDraft>();
 		dialog.setTitle(existing == null ? "Create Lesson" : "Edit Lesson");
 		dialog.setHeaderText(existing == null ? "Enter the lesson's required information." :

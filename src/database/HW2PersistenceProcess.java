@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Properties;
 
 import entityClasses.ExperienceRecord;
-import entityClasses.LessonLearned;
+import entityClasses.LessonsLearned;
 import lessonManagement.EffortInput;
 import lessonManagement.ExperienceDraft;
 import lessonManagement.LessonDraft;
@@ -64,7 +64,7 @@ public class HW2PersistenceProcess {
 
 	private static void create(LessonService service, Properties state, Path statePath)
 			throws Exception {
-		LessonLearned lesson = value(service.createLesson(OWNER_A, new LessonDraft(
+		LessonsLearned lesson = value(service.createLesson(OWNER_A, new LessonDraft(
 				"Fixing JavaFX setup", "The app would not start",
 				"Check the JavaFX path in the run configuration.")));
 		ExperienceRecord experience = value(service.createExperience(Long.toString(lesson.getId()),
@@ -76,7 +76,7 @@ public class HW2PersistenceProcess {
 	}
 
 	private static void verifyCreated(LessonService service, Properties state) {
-		LessonLearned lesson = value(service.readLesson(state.getProperty("lessonId"), OWNER_A));
+		LessonsLearned lesson = value(service.readLesson(state.getProperty("lessonId"), OWNER_A));
 		check("Fixing JavaFX setup".equals(lesson.getTitle()), "Created lesson title changed.");
 		ExperienceRecord experience = value(service.readExperience(
 				state.getProperty("experienceId"), OWNER_A));
@@ -97,7 +97,7 @@ public class HW2PersistenceProcess {
 	}
 
 	private static void verifyUpdated(LessonService service, Properties state) {
-		LessonLearned lesson = value(service.readLesson(state.getProperty("lessonId"), OWNER_A));
+		LessonsLearned lesson = value(service.readLesson(state.getProperty("lessonId"), OWNER_A));
 		check("Fixing JavaFX module paths".equals(lesson.getTitle()),
 				"Updated lesson title did not persist.");
 		ExperienceRecord experience = value(service.readExperience(
@@ -116,7 +116,7 @@ public class HW2PersistenceProcess {
 		long deletedExperienceId = Long.parseLong(state.getProperty("experienceId"));
 		value(service.deleteExperience(Long.toString(deletedExperienceId), OWNER_A));
 
-		LessonLearned removedLesson = value(service.createLesson(OWNER_A, new LessonDraft(
+		LessonsLearned removedLesson = value(service.createLesson(OWNER_A, new LessonDraft(
 				"Remove this lesson", "Temporary test record", "Deleted data must stay deleted.")));
 		ExperienceRecord removedExperience = value(service.createExperience(
 				Long.toString(removedLesson.getId()), OWNER_A,
@@ -130,7 +130,7 @@ public class HW2PersistenceProcess {
 	}
 
 	private static void verifyDeleted(LessonService service, Properties state) {
-		LessonLearned retained = value(service.readLesson(
+		LessonsLearned retained = value(service.readLesson(
 				state.getProperty("retainedLessonId"), OWNER_A));
 		check(value(service.listExperiences(Long.toString(retained.getId()), OWNER_A)).isEmpty(),
 				"Deleted experience reappeared.");
@@ -142,11 +142,11 @@ public class HW2PersistenceProcess {
 
 	private static void restrict(Database database, LessonService service, Properties state,
 			Path statePath) throws Exception {
-		LessonLearned lesson = value(service.createLesson(OWNER_A, new LessonDraft(
+		LessonsLearned lesson = value(service.createLesson(OWNER_A, new LessonDraft(
 				"Locked lesson", "Protect the original problem", "Keep the approved wording.")));
 		check(database.setLessonLocksForTesting(lesson.getId(), false, true, false, false),
 				"Could not seed the title lock.");
-		OperationResult<LessonLearned> rejectedEdit = service.updateLesson(
+		OperationResult<LessonsLearned> rejectedEdit = service.updateLesson(
 				Long.toString(lesson.getId()), OWNER_A,
 				new LessonDraft("Changed locked title", lesson.getProblemSituation(),
 						lesson.getLessonLearned()));
@@ -159,11 +159,11 @@ public class HW2PersistenceProcess {
 	}
 
 	private static void verifyRestricted(LessonService service, Properties state) {
-		LessonLearned lesson = value(service.readLesson(
+		LessonsLearned lesson = value(service.readLesson(
 				state.getProperty("restrictedLessonId"), OWNER_A));
 		check("Locked lesson".equals(lesson.getTitle()), "Rejected title edit was saved.");
 		check(lesson.isTitleLocked(), "Title lock did not persist.");
-		OperationResult<LessonLearned> denied = service.readLesson(
+		OperationResult<LessonsLearned> denied = service.readLesson(
 				state.getProperty("restrictedLessonId"), OWNER_B);
 		check(!denied.isSuccessful() &&
 				"You can only view your own lessons.".equals(denied.getMessage()),

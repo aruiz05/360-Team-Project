@@ -5,8 +5,8 @@ import lessonManagement.LessonDraft;
 import lessonManagement.LessonService;
 import lessonManagement.OperationResult;
 import entityClasses.ExperienceRecord;
-import entityClasses.LessonLearned;
-import entityClasses.LessonsCollection;
+import entityClasses.LessonsLearned;
+import entityClasses.LessonsLearnedList;
 
 import java.util.List;
 
@@ -32,7 +32,7 @@ public class ModelLessons {
 	 * @param filter specifies optional title text
 	 * @return the current contributor-only collection or subset
 	 */
-	protected static OperationResult<LessonsCollection> list(String owner, String filter) {
+	protected static OperationResult<LessonsLearnedList> list(String owner, String filter) {
 		return SERVICE.filterLessons(owner, filter);
 	}
 
@@ -41,7 +41,7 @@ public class ModelLessons {
 	 * @param draft specifies raw core lesson values
 	 * @return the created lesson or a helpful error
 	 */
-	protected static OperationResult<LessonLearned> create(String owner, LessonDraft draft) {
+	protected static OperationResult<LessonsLearned> create(String owner, LessonDraft draft) {
 		return SERVICE.createLesson(owner, draft);
 	}
 
@@ -50,7 +50,7 @@ public class ModelLessons {
 	 * @param id specifies the selected lesson
 	 * @return the contributor-visible lesson or a helpful error
 	 */
-	protected static OperationResult<LessonLearned> read(String owner, long id) {
+	protected static OperationResult<LessonsLearned> read(String owner, long id) {
 		return SERVICE.readLesson(Long.toString(id), owner);
 	}
 
@@ -60,7 +60,7 @@ public class ModelLessons {
 	 * @param draft specifies proposed replacement values
 	 * @return the updated lesson or a helpful error
 	 */
-	protected static OperationResult<LessonLearned> update(String owner, long id,
+	protected static OperationResult<LessonsLearned> update(String owner, long id,
 			LessonDraft draft) {
 		return SERVICE.updateLesson(Long.toString(id), owner, draft);
 	}
