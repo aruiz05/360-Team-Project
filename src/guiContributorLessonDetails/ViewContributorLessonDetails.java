@@ -42,29 +42,68 @@ import javafx.stage.Stage;
  */
 public class ViewContributorLessonDetails {
 
+	/** Foundation window width retained for consistent navigation and layout. */
 	private static final double WIDTH = applicationMain.FoundationsMain.WINDOW_WIDTH;
+
+	/** Foundation window height retained for consistent navigation and layout. */
 	private static final double HEIGHT = applicationMain.FoundationsMain.WINDOW_HEIGHT;
 
+	/** Identifies the selected-lesson detail page. */
 	private static final Label labelPageTitle = new Label("Lesson Details");
+
+	/** Displays the stable lesson ID and owner used by relationship and privacy checks. */
 	private static final Label labelIdentity = new Label();
+
+	/** Displays whether the title is editable or locked. */
 	private static final Label labelTitleLock = new Label();
+
+	/** Displays whether the problem or situation is editable or locked. */
 	private static final Label labelProblemLock = new Label();
+
+	/** Displays whether the lesson text is editable or locked. */
 	private static final Label labelLessonLock = new Label();
+
+	/** Displays experience counts, successes, and helpful correction messages. */
 	private static final Label labelStatus = new Label();
+
+	/** Read-only current title, including any permitted Curator edit. */
 	private static final TextArea textTitle = displayArea(1);
+
+	/** Read-only current problem or situation, including any permitted Curator edit. */
 	private static final TextArea textProblem = displayArea(2);
+
+	/** Read-only current lesson text, including any permitted Curator edit. */
 	private static final TextArea textLesson = displayArea(2);
+
+	/** Displays only the signed-in Contributor's related experience records. */
 	protected static final TableView<ExperienceRecord> tableExperiences =
 			new TableView<ExperienceRecord>();
+
+	/** Opens an editor for a new experience record under the selected lesson. */
 	private static final Button buttonAdd = new Button("Add Experience");
+
+	/** Opens the selected experience while disabling its persisted locked fields. */
 	private static final Button buttonEdit = new Button("Edit Experience");
+
+	/** Requests confirmed deletion when the selected experience has no locks. */
 	private static final Button buttonDelete = new Button("Delete Experience");
+
+	/** Returns to the current Contributor's lesson collection. */
 	private static final Button buttonBack = new Button("Back to Lessons");
 
+	/** Single reusable detail View following the Foundation shared-stage pattern. */
 	private static ViewContributorLessonDetails theView;
+
+	/** Shared stage used to return to the collection package. */
 	protected static Stage theStage;
+
+	/** Signed-in user whose username is passed to every ownership check. */
 	protected static User theUser;
+
+	/** Current persistent lesson whose core and experience information is displayed. */
 	protected static LessonsLearned currentLesson;
+
+	/** Scene retained so returning to this window preserves the Foundation navigation pattern. */
 	private static Scene scene;
 
 	/**********

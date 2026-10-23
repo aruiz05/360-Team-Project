@@ -22,6 +22,10 @@ import entityClasses.LessonsLearnedList;
  */
 public class ModelContributorLessons {
 
+	/**
+	 * Shared non-GUI service that applies validation, ownership, locks, and persistence for every
+	 * collection-window operation.
+	 */
 	private static final LessonService SERVICE =
 			new LessonService(applicationMain.FoundationsMain.database);
 

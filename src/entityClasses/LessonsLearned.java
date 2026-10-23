@@ -16,6 +16,14 @@ import lessonManagement.OperationResult;
  * write in this class ensures validation, ownership, and lock rules are applied before saved data
  * changes.</p>
  *
+ * <p>The attributes come directly from the Phase Two Contributor stories: {@code id} keeps the
+ * lesson and its later experience records related, {@code owner} enforces contributor privacy,
+ * the three text attributes hold the required core information, and the complete-record and
+ * field lock attributes preserve Curator decisions. Experience time and effort are normalized in
+ * related {@link ExperienceRecord} and {@link TeamMemberEffort} objects instead of being repeated
+ * here. The stable identifier also lets later phases attach search terms, Curator-only notes, and
+ * statistical summaries without exposing that separate role information to Contributors.</p>
+ *
  * @author CSE 360 Team Project
  *
  * @version 1.00        2026-10-01 Initial HW2 version
@@ -23,14 +31,31 @@ import lessonManagement.OperationResult;
  */
 public class LessonsLearned {
 
+	/** Database-generated key used by related experience and future search information. */
 	private final long id;
+
+	/** Username used to restrict Contributor lists and operations to the lesson's author. */
 	private final String owner;
+
+	/** Required short description used in lists and title-keyword subsets. */
 	private final String title;
+
+	/** Required explanation of the problem or situation that prompted the lesson. */
 	private final String problemSituation;
+
+	/** Required statement of the knowledge the Contributor wants others to reuse. */
 	private final String lessonLearned;
+
+	/** Persisted Curator-owned lock for the complete lesson. */
 	private final boolean lessonLocked;
+
+	/** Persisted Curator-owned lock for the title. */
 	private final boolean titleLocked;
+
+	/** Persisted Curator-owned lock for the problem or situation. */
 	private final boolean problemSituationLocked;
+
+	/** Persisted Curator-owned lock for the lesson text. */
 	private final boolean lessonLearnedLocked;
 
 	/**********
@@ -171,7 +196,9 @@ public class LessonsLearned {
 	 * <p> Method: delete(Database database, String contributor) </p>
 	 *
 	 * <p> Description: Delete an owned lesson only when neither the complete lesson nor any core
-	 * field is locked. Related experience and effort records are removed by database cascading.</p>
+	 * field is locked. A locked related experience field also blocks the deletion so database
+	 * cascading cannot bypass a persisted lock. When everything is unlocked, related experience
+	 * and effort records are removed by database cascading.</p>
 	 *
 	 * @param database specifies the Foundations database used for persistence
 	 * @param contributor specifies the signed-in contributor
@@ -184,9 +211,9 @@ public class LessonsLearned {
 				return OperationResult.failure("Lesson not found. Refresh the list.");
 			if (!current.getOwner().equals(contributor))
 				return OperationResult.failure("You can only delete your own lessons.");
-			if (current.hasAnyLockedField())
+			if (current.hasAnyLockedField() || database.hasLockedExperienceForLesson(id))
 				return OperationResult.failure(
-						"This lesson or one of its fields is locked and cannot be deleted.");
+						"This lesson or related information is locked and cannot be deleted.");
 			if (!database.deleteLesson(id))
 				return OperationResult.failure("Lesson not found. Refresh the list.");
 			return OperationResult.success(Boolean.TRUE, "Lesson deleted.");

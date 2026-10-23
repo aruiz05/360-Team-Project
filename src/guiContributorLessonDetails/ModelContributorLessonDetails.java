@@ -27,7 +27,10 @@ import lessonManagement.OperationResult;
  */
 public class ModelContributorLessonDetails {
 
-	// One shared service gives every detail operation the same persistent database and rules.
+	/**
+	 * Shared non-GUI service that gives every detail operation the same database, validation,
+	 * ownership rules, and persisted lock checks.
+	 */
 	private static final LessonService SERVICE =
 			new LessonService(applicationMain.FoundationsMain.database);
 

@@ -12,7 +12,10 @@ package entityClasses;
  */
 public class TeamMemberEffort {
 
+	/** Required name that identifies whose effort is being recorded. */
 	private final String memberName;
+
+	/** Finite, nonnegative effort stored in the stated unit of person-minutes. */
 	private final double effortMinutes;
 
 	/**********

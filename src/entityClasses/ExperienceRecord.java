@@ -16,17 +16,40 @@ import java.util.List;
  */
 public class ExperienceRecord {
 
+	/** Database-generated identifier for this distinct attempt to reuse a lesson. */
 	private final long id;
+
+	/** Persistent foreign key linking the attempt to exactly one lesson. */
 	private final long lessonId;
+
+	/** Contributor username used to enforce ownership of the experience information. */
 	private final String owner;
+
+	/** Required description of the work attempted after the original lesson was created. */
 	private final String whatWasDone;
+
+	/** Required explanation of the method used for the later attempt. */
 	private final String howItWasDone;
+
+	/** Finite, nonnegative elapsed time stored in the clearly stated unit of minutes. */
 	private final double elapsedMinutes;
+
+	/** Ordered person-minute entries retaining each team member's separate effort. */
 	private final List<TeamMemberEffort> teamEfforts;
+
+	/** Persisted lock for the complete experience record. */
 	private final boolean experienceLocked;
+
+	/** Persisted lock for the description of what was done. */
 	private final boolean whatWasDoneLocked;
+
+	/** Persisted lock for the description of how the work was done. */
 	private final boolean howItWasDoneLocked;
+
+	/** Persisted lock for elapsed time. */
 	private final boolean elapsedTimeLocked;
+
+	/** Persisted lock for the complete team-effort list. */
 	private final boolean teamEffortLocked;
 
 	/**********

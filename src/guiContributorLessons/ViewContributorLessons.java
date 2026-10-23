@@ -40,28 +40,65 @@ import javafx.stage.Stage;
  */
 public class ViewContributorLessons {
 
+	/** Foundation window width retained so the new page matches the existing application. */
 	private static final double WIDTH = applicationMain.FoundationsMain.WINDOW_WIDTH;
+
+	/** Foundation window height retained so navigation does not resize the shared stage. */
 	private static final double HEIGHT = applicationMain.FoundationsMain.WINDOW_HEIGHT;
 
+	/** Identifies the page as the signed-in Contributor's lesson collection. */
 	private static final Label labelPageTitle = new Label("My Lessons Learned");
+
+	/** Shows which Contributor owns every record permitted in this View. */
 	private static final Label labelUser = new Label();
+
+	/** Displays list counts, successes, and helpful correction messages. */
 	private static final Label labelStatus = new Label();
+
+	/** Accepts optional title keywords used to create a Contributor-only subset. */
 	protected static final TextField fieldFilter = new TextField();
+
+	/** Displays the current full list or subset and supplies the selected lesson. */
 	protected static final TableView<LessonsLearned> tableLessons =
 			new TableView<LessonsLearned>();
+
+	/** Requests a subset using the current title keywords. */
 	private static final Button buttonFilter = new Button("Apply Filter");
+
+	/** Clears all title keywords and restores the complete Contributor list. */
 	private static final Button buttonClear = new Button("Show All");
+
+	/** Opens an empty editor for a new lesson. */
 	private static final Button buttonCreate = new Button("Create");
+
+	/** Opens the selected lesson and its related experience information. */
 	private static final Button buttonView = new Button("View");
+
+	/** Opens the selected lesson while disabling its persisted locked fields. */
 	private static final Button buttonEdit = new Button("Edit");
+
+	/** Requests confirmed deletion when no lesson or related field is locked. */
 	private static final Button buttonDelete = new Button("Delete");
+
+	/** Returns to the Contributor home page without ending the session. */
 	private static final Button buttonReturn = new Button("Return");
+
+	/** Ends the current session and returns to the Foundation login page. */
 	private static final Button buttonLogout = new Button("Logout");
+
+	/** Closes the shared database connection and exits the application. */
 	private static final Button buttonQuit = new Button("Quit");
 
+	/** Single reusable View instance for the Foundation application's shared-stage pattern. */
 	private static ViewContributorLessons theView;
+
+	/** Shared Foundation stage used when this View navigates to another GUI package. */
 	protected static Stage theStage;
+
+	/** Signed-in user whose username is passed to every Model ownership check. */
 	protected static User theUser;
+
+	/** Scene retained so returning to the page reuses its controls and styling. */
 	private static Scene scene;
 
 	/**********
@@ -135,7 +172,7 @@ public class ViewContributorLessons {
 		buttonView.setTooltip(new Tooltip("Open the selected lesson and its experience records."));
 		buttonEdit.setTooltip(new Tooltip("Edit the unlocked fields of the selected lesson."));
 		buttonDelete.setTooltip(new Tooltip(
-				"Locked lessons or lessons with a locked field cannot be deleted."));
+				"Lessons with locked core or related information cannot be deleted."));
 		buttonCreate.setOnAction((_) -> ControllerContributorLessons.performCreate());
 		buttonView.setOnAction((_) -> ControllerContributorLessons.performView());
 		buttonEdit.setOnAction((_) -> ControllerContributorLessons.performEdit());

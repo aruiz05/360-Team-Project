@@ -30,7 +30,10 @@ import lessonManagement.OperationResult;
  */
 public class LessonsLearnedList {
 
+	/** Shared, dynamically sized backing data for a full list and all of its live subsets. */
 	private final List<LessonsLearned> lessons;
+
+	/** Normalized title keywords that determine which backing records this subset displays. */
 	private final List<String> keywords;
 
 	/** Construct an empty collection. */

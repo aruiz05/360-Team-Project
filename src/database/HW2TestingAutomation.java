@@ -26,9 +26,27 @@ import lessonManagement.OperationResult;
  * expected behavior, actual result, and pass or fail status.  Test cases use isolated databases,
  * and Tests 23 through 26 launch separate Java processes against file-backed databases.</p>
  *
+ * <p>The tests provide traceability to these Phase Two requirements:</p>
+ * <ul>
+ * <li><b>C1 Core lesson CRUD and validation:</b> Tests 1-3, 9-13, and 19-21.</li>
+ * <li><b>C2 Contributor list, subsets, and selection:</b> Tests 4-7, 9, and 22.</li>
+ * <li><b>C3 Ownership and visibility:</b> Tests 7, 8, 13, 18, 21, and 26.</li>
+ * <li><b>C4 Lock visibility and enforcement:</b> Tests 8, 12, 18, 20, and 26.</li>
+ * <li><b>C5 Experience time and effort CRUD:</b> Tests 4 and 14-18.</li>
+ * <li><b>C6 Empty, one-item, large, and synchronized collections:</b> Tests 5, 6, and 22.</li>
+ * <li><b>C7 Helpful errors with no rejected data saved:</b> Tests 2, 9, 11, 13, 17, 18,
+ * and 21.</li>
+ * <li><b>C8 Persistent data across application executions:</b> Tests 23-26.</li>
+ * </ul>
+ *
+ * <p>Every requirement is exercised by at least two positive or negative tests. A numbered test
+ * passes only when all of its detailed checks pass. The final numbered-test and variant-check
+ * totals let a reviewer distinguish a complete pass from a case that stopped early.</p>
+ *
  * @author CSE 360 Team Project
  *
  * @version 1.00        2026-10-01 Initial HW2 version
+ * @version 2.00        2026-10-22 Added TP2 requirement traceability and lock-cascade tests
  */
 public class HW2TestingAutomation {
 
@@ -48,7 +66,7 @@ public class HW2TestingAutomation {
 	 * @param args command-line arguments are not used
 	 */
 	public static void main(String[] args) {
-		System.out.println("HW2 LESSONS LEARNED TESTING AUTOMATION");
+		System.out.println("TP2 CONTRIBUTOR TESTING AUTOMATION");
 		System.out.println("Each numbered test may contain multiple required input checks.\n");
 
 		runTest(1, "Create a valid lesson",
@@ -109,7 +127,7 @@ public class HW2TestingAutomation {
 				"The lesson and children disappear while unrelated records remain.",
 				HW2TestingAutomation::testDeleteUnlockedLesson);
 		runTest(20, "Reject deletion of locked lessons",
-				"Whole-lesson and field locks preserve the lesson and related records.",
+				"Lesson, core-field, and related-record locks preserve all protected data.",
 				HW2TestingAutomation::testRejectLockedLessonDeletion);
 		runTest(21, "Reject unavailable deletion targets",
 				"Ownership and invalid-ID deletion attempts remove nothing.",
@@ -119,16 +137,16 @@ public class HW2TestingAutomation {
 				HW2TestingAutomation::testRefreshCollections);
 		runTest(23, "Keep created data after restart",
 				"A separate process reads the created lesson, experience, IDs, and relationship.",
-				() -> testPersistence("23", "create", "verify-created"));
+				HW2TestingAutomation::testCreatedDataPersistence);
 		runTest(24, "Keep updates after restart",
 				"A separate process reads updated values and rebuilt collections.",
-				() -> testPersistence("24", "create", "update", "verify-updated"));
+				HW2TestingAutomation::testUpdatedDataPersistence);
 		runTest(25, "Keep deletions after restart",
 				"Deleted lessons and experiences remain absent in a separate process.",
-				() -> testPersistence("25", "create", "delete", "verify-deleted"));
+				HW2TestingAutomation::testDeletedDataPersistence);
 		runTest(26, "Keep restrictions and rejected data unchanged",
 				"Owner, locks, original values, and restriction messages survive restart.",
-				() -> testPersistence("26", "restrict", "verify-restricted"));
+				HW2TestingAutomation::testRestrictionPersistence);
 
 		System.out.println("============================================================");
 		System.out.println("NUMBERED TEST TOTALS");
@@ -143,7 +161,15 @@ public class HW2TestingAutomation {
 		if (testsFailed > 0) System.exit(1);
 	}
 
-	private static void testCreateValidLesson() throws Exception {
+	/**
+	 * <p><b>Test 1; requirements C1 and C2.</b> Creates valid core information through the same
+	 * service used by the GUI, then checks the generated ID, owner, saved fields, read result, and
+	 * contributor list. Output {@code Result: PASS} means every saved value and relationship
+	 * matched the expected values.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testCreateValidLesson() throws Exception {
 		try (TestContext context = context("test1")) {
 			LessonsLearned created = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
 			check(created.getId() > 0, "Database assigned a positive unique ID.");
@@ -156,7 +182,14 @@ public class HW2TestingAutomation {
 		}
 	}
 
-	private static void testRejectMissingCoreInformation() throws Exception {
+	/**
+	 * <p><b>Test 2; requirements C1 and C7.</b> Tries null, empty, and spaces-only variants in each
+	 * required core field. A pass means every create was rejected with the field-specific helpful
+	 * message and the database remained empty.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testRejectMissingCoreInformation() throws Exception {
 		try (TestContext context = context("test2")) {
 			String[] invalid = {null, "", "   "};
 			for (String value : invalid) {
@@ -175,7 +208,14 @@ public class HW2TestingAutomation {
 		}
 	}
 
-	private static void testKeepSimilarLessonsSeparate() throws Exception {
+	/**
+	 * <p><b>Test 3; requirements C1 and C6.</b> Saves two lessons with the same title and different
+	 * content. A pass shows that unique IDs, not title text, keep the records separate in reads and
+	 * collections.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testKeepSimilarLessonsSeparate() throws Exception {
 		try (TestContext context = context("test3")) {
 			LessonsLearned first = createLesson(context, OWNER_A, "Same title", "First problem",
 					"First lesson text");
@@ -191,7 +231,14 @@ public class HW2TestingAutomation {
 		}
 	}
 
-	private static void testReadSavedLesson() throws Exception {
+	/**
+	 * <p><b>Test 4; requirements C2 and C5.</b> Reads a selected lesson and its linked experience
+	 * record. A pass means the core fields, parent ID, elapsed minutes, and individual team efforts
+	 * all equal the values that were saved.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testReadSavedLesson() throws Exception {
 		try (TestContext context = context("test4")) {
 			LessonsLearned lesson = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
 			ExperienceDraft draft = experience("Changed the module path", "Used Eclipse settings",
@@ -210,7 +257,14 @@ public class HW2TestingAutomation {
 		}
 	}
 
-	private static void testShowEmptyList() throws Exception {
+	/**
+	 * <p><b>Test 5; requirements C2 and C6.</b> Reads a contributor with no lessons and a keyword
+	 * subset with no matches. A pass means both lists are empty and return the helpful
+	 * {@code No lessons found.} message.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testShowEmptyList() throws Exception {
 		try (TestContext context = context("test5")) {
 			OperationResult<LessonsLearnedList> empty = context.service.listLessons(OWNER_A);
 			check(success(empty).isEmpty(), "Contributor with no records receives an empty list.");
@@ -224,7 +278,14 @@ public class HW2TestingAutomation {
 		}
 	}
 
-	private static void testShowOneAndManyLessons() throws Exception {
+	/**
+	 * <p><b>Test 6; requirements C2 and C6.</b> Exercises a one-item collection, a dynamically
+	 * sized 250-item collection, and one- and many-item subsets. A pass means no fixed entry limit
+	 * or missing ID was observed.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testShowOneAndManyLessons() throws Exception {
 		try (TestContext context = context("test6")) {
 			LessonsLearned only = createLesson(context, OWNER_A, "Solo marker",
 					"One-record problem", "One-record lesson");
@@ -256,7 +317,14 @@ public class HW2TestingAutomation {
 		}
 	}
 
-	private static void testKeepContributorContentPrivate() throws Exception {
+	/**
+	 * <p><b>Test 7; requirements C2 and C3.</b> Creates records for two contributors and requests
+	 * full lists, subsets, and a direct read as Contributor A. A pass means only A's records are
+	 * returned and B's lesson is rejected with an ownership message.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testKeepContributorContentPrivate() throws Exception {
 		try (TestContext context = context("test7")) {
 			LessonsLearned aOne = createLesson(context, OWNER_A, "A Java lesson", "A problem", "A1");
 			LessonsLearned aTwo = createLesson(context, OWNER_A, "A database lesson", "A problem", "A2");
@@ -277,7 +345,14 @@ public class HW2TestingAutomation {
 		}
 	}
 
-	private static void testShowEditedContentAndLockStatus() throws Exception {
+	/**
+	 * <p><b>Test 8; requirements C3 and C4.</b> Seeds a Curator-style core edit, a field lock, and
+	 * separate role information. A pass means the Contributor sees edited core content and lock
+	 * state while the Contributor API exposes none of the separate role information.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testShowEditedContentAndLockStatus() throws Exception {
 		try (TestContext context = context("test8")) {
 			LessonsLearned original = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
 			check(context.database.updateLessonCoreForTesting(original.getId(),
@@ -302,7 +377,14 @@ public class HW2TestingAutomation {
 		}
 	}
 
-	private static void testRejectInvalidLessonIds() throws Exception {
+	/**
+	 * <p><b>Test 9; requirements C2 and C7.</b> Attempts reads with empty, malformed, and missing
+	 * IDs. A pass means each request returns its specific corrective message and no data is
+	 * created.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testRejectInvalidLessonIds() throws Exception {
 		try (TestContext context = context("test9")) {
 			assertFailure(context.service.readLesson("", OWNER_A), "Select a lesson.");
 			assertFailure(context.service.readLesson("abc", OWNER_A),
@@ -313,7 +395,14 @@ public class HW2TestingAutomation {
 		}
 	}
 
-	private static void testUpdateValidCoreInformation() throws Exception {
+	/**
+	 * <p><b>Test 10; requirements C1 and C6.</b> Replaces all unlocked core fields and reloads the
+	 * record and a matching subset. A pass means the ID and owner remain stable while every new
+	 * value appears in persistent reads and lists.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testUpdateValidCoreInformation() throws Exception {
 		try (TestContext context = context("test10")) {
 			LessonsLearned original = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
 			LessonDraft changed = new LessonDraft("Diagnosing JavaFX startup",
@@ -331,7 +420,14 @@ public class HW2TestingAutomation {
 		}
 	}
 
-	private static void testRejectInvalidEdits() throws Exception {
+	/**
+	 * <p><b>Test 11; requirements C1 and C7.</b> Applies null, empty, and spaces-only variants to
+	 * every required field during update. A pass means every edit is rejected, the helpful message
+	 * identifies the field, and the original row and record count remain unchanged.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testRejectInvalidEdits() throws Exception {
 		try (TestContext context = context("test11")) {
 			LessonsLearned original = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
 			String[] invalid = {null, "", "   "};
@@ -355,7 +451,14 @@ public class HW2TestingAutomation {
 		}
 	}
 
-	private static void testRejectLockedEdits() throws Exception {
+	/**
+	 * <p><b>Test 12; requirements C1 and C4.</b> Attempts to change a field lock and a complete
+	 * lesson lock, then changes a different unlocked field. A pass proves locked content is
+	 * protected without unnecessarily blocking permitted edits.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testRejectLockedEdits() throws Exception {
 		try (TestContext context = context("test12")) {
 			LessonsLearned fieldLocked = createLesson(context, OWNER_A, "Locked title",
 					"Editable problem", "Editable lesson");
@@ -380,7 +483,14 @@ public class HW2TestingAutomation {
 		}
 	}
 
-	private static void testRejectUnavailableUpdateTargets() throws Exception {
+	/**
+	 * <p><b>Test 13; requirements C3 and C7.</b> Attempts updates using another owner and empty,
+	 * malformed, and missing IDs. A pass means all attempts are rejected and the stored lesson and
+	 * count remain unchanged.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testRejectUnavailableUpdateTargets() throws Exception {
 		try (TestContext context = context("test13")) {
 			LessonsLearned b = createLesson(context, OWNER_B, "B title", "B problem", "B lesson");
 			LessonDraft change = new LessonDraft("Changed", "Changed", "Changed");
@@ -397,7 +507,14 @@ public class HW2TestingAutomation {
 		}
 	}
 
-	private static void testCreateAndReadExperiences() throws Exception {
+	/**
+	 * <p><b>Test 14; requirement C5.</b> Creates two later attempts with different descriptions,
+	 * elapsed times, and team-effort entries. A pass means the records have different IDs, remain
+	 * linked to the correct lesson, and retain every expected value.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testCreateAndReadExperiences() throws Exception {
 		try (TestContext context = context("test14")) {
 			LessonsLearned lesson = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
 			ExperienceRecord first = success(context.service.createExperience(id(lesson), OWNER_A,
@@ -418,7 +535,14 @@ public class HW2TestingAutomation {
 		}
 	}
 
-	private static void testUpdateExperience() throws Exception {
+	/**
+	 * <p><b>Test 15; requirements C5 and C7.</b> Updates one experience with zero and decimal time
+	 * and effort values while retaining a second record. A pass proves finite nonnegative values
+	 * persist and one update does not alter another attempt.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testUpdateExperience() throws Exception {
 		try (TestContext context = context("test15")) {
 			LessonsLearned lesson = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
 			ExperienceRecord first = createExperience(context, lesson, "First attempt", "First method",
@@ -445,7 +569,13 @@ public class HW2TestingAutomation {
 		}
 	}
 
-	private static void testDeleteExperiences() throws Exception {
+	/**
+	 * <p><b>Test 16; requirement C5.</b> Deletes first one and then the last experience record. A
+	 * pass means only the selected records disappear and their parent lesson remains available.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testDeleteExperiences() throws Exception {
 		try (TestContext context = context("test16")) {
 			LessonsLearned lesson = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
 			ExperienceRecord first = createExperience(context, lesson, "First", "Method 1", "10",
@@ -464,7 +594,14 @@ public class HW2TestingAutomation {
 		}
 	}
 
-	private static void testRejectInvalidExperienceInput() throws Exception {
+	/**
+	 * <p><b>Test 17; requirements C5 and C7.</b> Exercises missing descriptions and team-member
+	 * names plus blank, malformed, negative, non-finite time and effort values on create and
+	 * update. A pass means helpful errors are returned and saved values and counts do not change.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testRejectInvalidExperienceInput() throws Exception {
 		try (TestContext context = context("test17")) {
 			LessonsLearned lesson = success(context.service.createLesson(OWNER_A, SAMPLE_LESSON));
 			ExperienceRecord saved = createExperience(context, lesson, "Original what", "Original how",
@@ -511,7 +648,14 @@ public class HW2TestingAutomation {
 		}
 	}
 
-	private static void testRejectUnavailableExperienceTargets() throws Exception {
+	/**
+	 * <p><b>Test 18; requirements C3, C4, C5, and C7.</b> Exercises missing lessons, ownership,
+	 * field locks, parent locks, and invalid experience IDs. A pass means reads and writes are
+	 * rejected with corrective messages and every protected record remains saved.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testRejectUnavailableExperienceTargets() throws Exception {
 		try (TestContext context = context("test18")) {
 			ExperienceDraft valid = experience("What", "How", "5", effort("Adan", "5"));
 			assertFailure(context.service.createExperience("999999", OWNER_A, valid),
@@ -530,6 +674,8 @@ public class HW2TestingAutomation {
 					false, false, false), "Experience field lock was seeded.");
 			assertFailure(context.service.updateExperience(id(lockedField), OWNER_A,
 					experience("Changed what", "How", "7", effort("Adan", "7"))),
+					"This field is locked.");
+			assertFailure(context.service.deleteExperience(id(lockedField), OWNER_A),
 					"This field is locked.");
 
 			ExperienceRecord lessonLockedRecord = createExperience(context, aLesson,
@@ -552,7 +698,14 @@ public class HW2TestingAutomation {
 		}
 	}
 
-	private static void testDeleteUnlockedLesson() throws Exception {
+	/**
+	 * <p><b>Test 19; requirements C1 and C5.</b> Deletes an unlocked lesson that has two related
+	 * experiences. A pass means the selected lesson and its children are removed atomically while
+	 * an unrelated lesson remains.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testDeleteUnlockedLesson() throws Exception {
 		try (TestContext context = context("test19")) {
 			LessonsLearned removed = createLesson(context, OWNER_A, "Delete marker lesson",
 					"Temporary problem", "Temporary lesson");
@@ -576,30 +729,55 @@ public class HW2TestingAutomation {
 		}
 	}
 
-	private static void testRejectLockedLessonDeletion() throws Exception {
+	/**
+	 * <p><b>Test 20; requirements C1 and C4.</b> Attempts deletion with a complete lesson lock, a
+	 * core-field lock, and a lock on related experience information. A pass means every lesson and
+	 * child record remains, proving a database cascade cannot bypass a lock.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testRejectLockedLessonDeletion() throws Exception {
 		try (TestContext context = context("test20")) {
 			LessonsLearned whole = createLesson(context, OWNER_A, "Whole lock", "Problem", "Lesson");
 			ExperienceRecord wholeChild = createExperience(context, whole, "What", "How", "1",
 					effort("Adan", "1"));
 			context.database.setLessonLocksForTesting(whole.getId(), true, false, false, false);
 			assertFailure(context.service.deleteLesson(id(whole), OWNER_A),
-					"This lesson or one of its fields is locked and cannot be deleted.");
+					"This lesson or related information is locked and cannot be deleted.");
 
 			LessonsLearned field = createLesson(context, OWNER_A, "Field lock", "Problem", "Lesson");
 			ExperienceRecord fieldChild = createExperience(context, field, "What", "How", "2",
 					effort("Adan", "2"));
 			context.database.setLessonLocksForTesting(field.getId(), false, false, true, false);
 			assertFailure(context.service.deleteLesson(id(field), OWNER_A),
-					"This lesson or one of its fields is locked and cannot be deleted.");
+					"This lesson or related information is locked and cannot be deleted.");
+
+			LessonsLearned related = createLesson(context, OWNER_A, "Related lock", "Problem",
+					"Lesson");
+			ExperienceRecord relatedChild = createExperience(context, related, "What", "How", "3",
+					effort("Adan", "3"));
+			context.database.setExperienceLocksForTesting(relatedChild.getId(), false, false,
+					false, true, false);
+			assertFailure(context.service.deleteLesson(id(related), OWNER_A),
+					"This lesson or related information is locked and cannot be deleted.");
 			check(context.database.getLesson(whole.getId()) != null &&
 					context.database.getExperience(wholeChild.getId()) != null &&
 					context.database.getLesson(field.getId()) != null &&
-					context.database.getExperience(fieldChild.getId()) != null,
-					"Both locked lessons and their related records remain.");
+					context.database.getExperience(fieldChild.getId()) != null &&
+					context.database.getLesson(related.getId()) != null &&
+					context.database.getExperience(relatedChild.getId()) != null,
+					"All locked lessons and related records remain.");
 		}
 	}
 
-	private static void testRejectUnavailableDeletionTargets() throws Exception {
+	/**
+	 * <p><b>Test 21; requirements C1, C3, and C7.</b> Attempts lesson deletion as a different
+	 * contributor and with empty, malformed, and missing IDs. A pass means the only stored lesson
+	 * remains and each request returns the expected message.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testRejectUnavailableDeletionTargets() throws Exception {
 		try (TestContext context = context("test21")) {
 			LessonsLearned b = createLesson(context, OWNER_B, "B title", "B problem", "B lesson");
 			assertFailure(context.service.deleteLesson(id(b), OWNER_A),
@@ -615,7 +793,14 @@ public class HW2TestingAutomation {
 		}
 	}
 
-	private static void testRefreshCollections() throws Exception {
+	/**
+	 * <p><b>Test 22; requirements C2 and C6.</b> Maintains a full list and live keyword subset
+	 * while creating, renaming, and deleting records. A pass means both views stay consistent with
+	 * persistence and contain no stale or duplicate entries.</p>
+	 *
+	 * @throws Exception when the isolated test database cannot be used
+	 */
+	protected static void testRefreshCollections() throws Exception {
 		try (TestContext context = context("test22")) {
 			LessonsLearnedList full = success(LessonsLearnedList.readForContributor(
 					context.database, OWNER_A));
@@ -670,6 +855,50 @@ public class HW2TestingAutomation {
 				"Adan".equals(retained.getTeamEfforts().get(0).getMemberName()) &&
 				Double.compare(retained.getTeamEfforts().get(0).getEffortMinutes(), 10) == 0,
 				"Rejected experience update preserved the original values.");
+	}
+
+	/**
+	 * <p><b>Test 23; requirements C5 and C8.</b> Creates a lesson and linked experience in one
+	 * Java process and verifies them in a different process. A pass means IDs, values, collection
+	 * membership, and the parent-child relationship survived application termination.</p>
+	 *
+	 * @throws Exception when the file-backed test database or child process cannot be used
+	 */
+	protected static void testCreatedDataPersistence() throws Exception {
+		testPersistence("23", "create", "verify-created");
+	}
+
+	/**
+	 * <p><b>Test 24; requirements C1, C5, C6, and C8.</b> Creates and updates data in separate
+	 * process phases and verifies the new lesson, experience, effort, and subset values in another
+	 * process. A pass proves updates and rebuilt collections persist across executions.</p>
+	 *
+	 * @throws Exception when the file-backed test database or child process cannot be used
+	 */
+	protected static void testUpdatedDataPersistence() throws Exception {
+		testPersistence("24", "create", "update", "verify-updated");
+	}
+
+	/**
+	 * <p><b>Test 25; requirements C1, C5, and C8.</b> Deletes an experience and a lesson with its
+	 * child records, then verifies absence in a separate process. A pass means deleted persistent
+	 * data does not reappear after restart.</p>
+	 *
+	 * @throws Exception when the file-backed test database or child process cannot be used
+	 */
+	protected static void testDeletedDataPersistence() throws Exception {
+		testPersistence("25", "create", "delete", "verify-deleted");
+	}
+
+	/**
+	 * <p><b>Test 26; requirements C3, C4, C7, and C8.</b> Saves lock state, rejects an edit and
+	 * deletion, restarts the application, and rechecks the original content, lock, and ownership
+	 * message. A pass proves rejected operations changed nothing and restrictions persisted.</p>
+	 *
+	 * @throws Exception when the file-backed test database or child process cannot be used
+	 */
+	protected static void testRestrictionPersistence() throws Exception {
+		testPersistence("26", "restrict", "verify-restricted");
 	}
 
 	private static void testPersistence(String testNumber, String... phases) throws Exception {

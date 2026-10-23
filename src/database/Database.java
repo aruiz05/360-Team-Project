@@ -1581,6 +1581,29 @@ public class Database {
 		}
 	}
 
+	/*******
+	 * <p> Method: boolean hasLockedExperienceForLesson(long lessonId) </p>
+	 *
+	 * <p> Description: Determine whether deleting a lesson would also remove locked related
+	 * information. This check occurs before the cascading lesson deletion so a database cascade
+	 * cannot bypass a complete-record or field-level experience lock.</p>
+	 *
+	 * @param lessonId specifies the lesson whose related records must be checked
+	 * @return true when any related experience record or field is locked
+	 * @throws SQLException when the lock state cannot be read
+	 */
+	public boolean hasLockedExperienceForLesson(long lessonId) throws SQLException {
+		String query = "SELECT COUNT(*) FROM experienceRecords WHERE lessonId = ? AND " +
+				"(experienceLocked = TRUE OR whatLocked = TRUE OR howLocked = TRUE OR " +
+				"elapsedLocked = TRUE OR effortLocked = TRUE)";
+		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+			pstmt.setLong(1, lessonId);
+			try (ResultSet rs = pstmt.executeQuery()) {
+				return rs.next() && rs.getInt(1) > 0;
+			}
+		}
+	}
+
 	// The following package-protected helpers seed Phase Three-owned state for HW2 tests.  They are
 	// deliberately unavailable to the contributor UI, which must respect but not create locks.
 	boolean setLessonLocksForTesting(long id, boolean lessonLocked, boolean titleLocked,
