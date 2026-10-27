@@ -20,7 +20,7 @@ does not contain duplicate classes.
 
    The result should be `tp2-javadocs`.
 
-2. Locate the JavaFX SDK `lib` folder. It is the folder containing `javafx-controls.jar`.
+2. Locate the JavaFX SDK `lib` folder. It is the folder containing `javafx.controls.jar`.
 
 3. Create the main TP2 submission folder if it does not already exist:
 

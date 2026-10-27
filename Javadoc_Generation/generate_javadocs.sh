@@ -35,9 +35,9 @@ if [[ ! -x "$javadoc_command" ]]; then
 	exit 1
 fi
 
-if [[ ! -d "$javafx_lib" || ! -f "$javafx_lib/javafx-controls.jar" ]]; then
+if [[ ! -d "$javafx_lib" || ! -f "$javafx_lib/javafx.controls.jar" ]]; then
 	printf '%s\n' "The JavaFX lib folder is invalid: $javafx_lib"
-	printf '%s\n' "It must contain javafx-controls.jar."
+	printf '%s\n' "It must contain javafx.controls.jar."
 	exit 1
 fi
 
