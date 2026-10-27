@@ -1,0 +1,10 @@
+src/guiContributorLessons/package-info.java
+src/guiContributorLessons/ViewContributorLessons.java
+src/guiContributorLessons/ControllerContributorLessons.java
+src/guiContributorLessons/ModelContributorLessons.java
+src/guiContributorLessons/LessonEditorDialog.java
+src/guiContributorLessonDetails/package-info.java
+src/guiContributorLessonDetails/ViewContributorLessonDetails.java
+src/guiContributorLessonDetails/ControllerContributorLessonDetails.java
+src/guiContributorLessonDetails/ModelContributorLessonDetails.java
+src/guiContributorLessonDetails/ExperienceEditorDialog.java
