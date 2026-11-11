@@ -21,12 +21,15 @@ import lessonManagement.ExperienceValidator.ValidatedExperience;
  * @author CSE 360 Team Project
  *
  * @version 1.00        2026-10-01 Initial HW2 version
+ * @version 2.00        2026-11-10 Uses the HW3 experience lock policy prototype
  */
 public class LessonService {
 
 	private final Database database;
 
 	/**
+	 * Construct a service that uses the shared Foundations database.
+	 *
 	 * @param database specifies the Foundations database used for persistence
 	 */
 	public LessonService(Database database) {
@@ -235,24 +238,18 @@ public class LessonService {
 						"You can only manage your own experience records.");
 			if (lesson.isLessonLocked())
 				return OperationResult.failure("This lesson is locked.");
-			if (existing.isExperienceLocked())
-				return OperationResult.failure("This experience record is locked.");
+
+			ExperienceLockState lockState = lockStateFor(existing);
+			LockDecision recordDecision = ExperienceLockPolicy.evaluateRecordEdit(lockState);
+			if (!recordDecision.isAllowed())
+				return OperationResult.failure(recordDecision.getMessage());
 
 			OperationResult<ValidatedExperience> validation = ExperienceValidator.validate(draft);
 			if (!validation.isSuccessful()) return OperationResult.failure(validation.getMessage());
 			ValidatedExperience value = validation.getValue();
-			if (existing.isWhatWasDoneLocked() &&
-					!existing.getWhatWasDone().equals(value.getWhatWasDone()))
-				return OperationResult.failure("This field is locked.");
-			if (existing.isHowItWasDoneLocked() &&
-					!existing.getHowItWasDone().equals(value.getHowItWasDone()))
-				return OperationResult.failure("This field is locked.");
-			if (existing.isElapsedTimeLocked() &&
-					Double.compare(existing.getElapsedMinutes(), value.getElapsedMinutes()) != 0)
-				return OperationResult.failure("This field is locked.");
-			if (existing.isTeamEffortLocked() &&
-					!sameEfforts(existing.getTeamEfforts(), value.getTeamEfforts()))
-				return OperationResult.failure("This field is locked.");
+			LockDecision fieldDecision = evaluateChangedFields(existing, value, lockState);
+			if (!fieldDecision.isAllowed())
+				return OperationResult.failure(fieldDecision.getMessage());
 
 			ExperienceRecord updated = new ExperienceRecord(existing.getId(),
 					existing.getLessonId(), existing.getOwner(), value.getWhatWasDone(),
@@ -291,8 +288,10 @@ public class LessonService {
 						"You can only manage your own experience records.");
 			if (lesson.isLessonLocked())
 				return OperationResult.failure("This lesson is locked.");
-			if (existing.hasAnyLockedField())
-				return OperationResult.failure("This field is locked.");
+			LockDecision deleteDecision =
+					ExperienceLockPolicy.evaluateDelete(lockStateFor(existing));
+			if (!deleteDecision.isAllowed())
+				return OperationResult.failure(deleteDecision.getMessage());
 			if (!database.deleteExperience(existing.getId()))
 				return OperationResult.failure("Experience record not found.");
 			return OperationResult.success(Boolean.TRUE, "Experience deleted.");
@@ -333,6 +332,55 @@ public class LessonService {
 				return false;
 		}
 		return true;
+	}
+
+	/**********
+	 * Evaluate only fields whose proposed value differs from the stored value. This preserves the
+	 * TP2 rule that a contributor may change an unrelated unlocked field while a different field
+	 * remains locked.
+	 *
+	 * @param existing specifies the latest persistent experience
+	 * @param proposed specifies the validated replacement values
+	 * @param lockState specifies the latest persistent lock snapshot
+	 * @return the first rejected field decision, or approval when every change is permitted
+	 */
+	private LockDecision evaluateChangedFields(ExperienceRecord existing,
+			ValidatedExperience proposed, ExperienceLockState lockState) {
+		LockDecision decision;
+		if (!existing.getWhatWasDone().equals(proposed.getWhatWasDone())) {
+			decision = ExperienceLockPolicy.evaluateFieldEdit(
+					lockState, ExperienceField.WHAT_WAS_DONE);
+			if (!decision.isAllowed()) return decision;
+		}
+		if (!existing.getHowItWasDone().equals(proposed.getHowItWasDone())) {
+			decision = ExperienceLockPolicy.evaluateFieldEdit(
+					lockState, ExperienceField.HOW_IT_WAS_DONE);
+			if (!decision.isAllowed()) return decision;
+		}
+		if (Double.compare(existing.getElapsedMinutes(), proposed.getElapsedMinutes()) != 0) {
+			decision = ExperienceLockPolicy.evaluateFieldEdit(
+					lockState, ExperienceField.ELAPSED_TIME);
+			if (!decision.isAllowed()) return decision;
+		}
+		if (!sameEfforts(existing.getTeamEfforts(), proposed.getTeamEfforts())) {
+			decision = ExperienceLockPolicy.evaluateFieldEdit(
+					lockState, ExperienceField.TEAM_MEMBER_EFFORT);
+			if (!decision.isAllowed()) return decision;
+		}
+		return LockDecision.allow("The requested experience changes are allowed.");
+	}
+
+	/**********
+	 * Map the persistent TP2 flags to the immutable state consumed by the HW3 policy. Centralizing
+	 * the mapping keeps future JavaFX and staff workflows from assigning a flag to the wrong field.
+	 *
+	 * @param experience specifies the latest persistent experience
+	 * @return an immutable lock snapshot
+	 */
+	private ExperienceLockState lockStateFor(ExperienceRecord experience) {
+		return ExperienceLockState.fromFlags(experience.isExperienceLocked(),
+				experience.isWhatWasDoneLocked(), experience.isHowItWasDoneLocked(),
+				experience.isElapsedTimeLocked(), experience.isTeamEffortLocked());
 	}
 
 	private boolean blank(String value) {
