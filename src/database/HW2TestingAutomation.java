@@ -674,9 +674,9 @@ public class HW2TestingAutomation {
 					false, false, false), "Experience field lock was seeded.");
 			assertFailure(context.service.updateExperience(id(lockedField), OWNER_A,
 					experience("Changed what", "How", "7", effort("Adan", "7"))),
-					"This field is locked.");
+					"The what was done field is locked and cannot be edited.");
 			assertFailure(context.service.deleteExperience(id(lockedField), OWNER_A),
-					"This field is locked.");
+					"This experience contains locked information and cannot be deleted.");
 
 			ExperienceRecord lessonLockedRecord = createExperience(context, aLesson,
 					"Delete test", "Method", "8", effort("Adan", "8"));
