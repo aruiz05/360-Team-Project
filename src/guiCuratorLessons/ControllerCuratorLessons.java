@@ -97,6 +97,13 @@ public class ControllerCuratorLessons {
         if (selected.isEmpty()) { ViewCuratorLessons.status.setText("Select a destination lesson first."); return; }
         guiCuratorStatistics.ViewCuratorStatistics.displayStatistics(ViewCuratorLessons.stage, ViewCuratorLessons.user, Long.parseLong(selected));
     }
+    /** Open Curator AI with the current unsaved core; tested by TP3AiGuiTestingAutomation. */
+    protected static void ai() {
+        if (id().isEmpty()) { ViewCuratorLessons.status.setText("Select a lesson for AI assistance."); return; }
+        guiAiAssistance.ViewAiAssistance.displayAssistance(ViewCuratorLessons.stage, ViewCuratorLessons.user,
+                guiTools.RoleNames.CURATOR, Long.parseLong(id()), new LessonDraft(ViewCuratorLessons.title.getText(),
+                ViewCuratorLessons.problem.getText(), ViewCuratorLessons.text.getText()));
+    }
     private static void complete(OperationResult<?> result) {
         if (result.isSuccessful()) search(); ViewCuratorLessons.status.setText(result.getMessage());
     }

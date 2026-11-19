@@ -1,5 +1,8 @@
 # TP3 persistent statistics and visibility
 
+This document records the statistics increment. The next increment adds the real AI adapter
+and review workflows; see [TP3_AI.md](TP3_AI.md), including its pending live-provider verification.
+
 This increment continues on `tp3` from `b7e72f90f408351118089977669b25e9c31f89ed`.
 The original `hw3` baseline remains `bec1de6bdafad9a8962586ec02205203e96c1920`.
 

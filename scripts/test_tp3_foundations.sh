@@ -44,14 +44,14 @@ for test in "${regressions[@]}"; do
     echo "PASS $test"
 done
 "$TP3_JDK/bin/java" -Dtp3.test.classpath="$classpath" -jar "$TP3_JUNIT_JAR" execute \
-    --class-path "$classpath" --select-class database.TP3FoundationsTest --select-class database.TP3DiscoveryTest --select-class database.TP3StatisticsTest --details tree \
+    --class-path "$classpath" --select-class database.TP3FoundationsTest --select-class database.TP3DiscoveryTest --select-class database.TP3StatisticsTest --select-class database.AiAssistanceTest --select-class aiAssistance.OpenAiClientTest --details tree \
     --disable-ansi-colors --fail-if-no-tests --reports-dir "$output_root/junit" \
     > "$output_root/logs/junit.log" 2>&1
-echo "PASS database.TP3FoundationsTest, database.TP3DiscoveryTest and database.TP3StatisticsTest"
+echo "PASS database.TP3FoundationsTest, database.TP3DiscoveryTest, database.TP3StatisticsTest, database.AiAssistanceTest and aiAssistance.OpenAiClientTest"
 gui_options=()
 gui_classpath="$classpath:$TP3_JAVAFX_LIB/*"
 if [[ -n "${TP3_MONOCLE_JAR:-}" ]]; then
-    gui_options+=(-Dglass.platform=Monocle -Dmonocle.platform=Headless -Dprism.order=sw)
+    gui_options+=(-Dglass.platform=Monocle -Dmonocle.platform=Headless -Dprism.order=sw -Dheadless.geometry=1600x1000-32 -Dquantum.multithreaded=false)
     gui_classpath="$gui_classpath:$TP3_MONOCLE_JAR"
 fi
 "$TP3_JDK/bin/java" --enable-native-access=ALL-UNNAMED \
@@ -68,4 +68,18 @@ mkdir -p "$output_root/statistics-gui-home"
     -Duser.home="$output_root/statistics-gui-home" -Dtp3.isolated.gui.test=true "${gui_options[@]}" \
     -cp "$gui_classpath" guiTools.TP3StatisticsGuiTestingAutomation > "$output_root/logs/statistics-gui.log" 2>&1
 echo "PASS guiTools.TP3StatisticsGuiTestingAutomation"
-echo "All foundation, discovery, statistics, and regression suites passed. Logs: $output_root"
+mkdir -p "$output_root/ai-gui-home"
+"$TP3_JDK/bin/java" --enable-native-access=ALL-UNNAMED \
+    -Duser.home="$output_root/ai-gui-home" -Dtp3.isolated.gui.test=true "${gui_options[@]}" \
+    -cp "$gui_classpath" guiTools.TP3AiGuiTestingAutomation > "$output_root/logs/ai-gui.log" 2>&1
+echo "PASS guiTools.TP3AiGuiTestingAutomation (explicit loopback provider fixture)"
+# An asynchronous renderer error may not change the Java process exit code.
+for gui_log in "$output_root/logs/gui.log" "$output_root/logs/discovery-gui.log" "$output_root/logs/statistics-gui.log" "$output_root/logs/ai-gui.log"; do
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^[a-zA-Z_][a-zA-Z0-9_$.]*(Exception|Error)(:|$) ]]; then
+            echo "GUI runtime error in $gui_log: $line" >&2
+            exit 1
+        fi
+    done < "$gui_log"
+done
+echo "All automated suites passed. Live AI verification requires scripts/verify_live_ai.sh. Logs: $output_root"

@@ -156,7 +156,7 @@ public class ViewContributorLessons {
 		tableLessons.getColumns().add(locked);
 		tableLessons.setLayoutX(20);
 		tableLessons.setLayoutY(130);
-		tableLessons.setPrefSize(WIDTH - 40, 330);
+		tableLessons.setPrefSize(WIDTH - 40, 300);
 		tableLessons.setPlaceholder(new Label("No lessons found."));
 		tableLessons.setOnMouseClicked(event -> {
 			if (event.getClickCount() == 2) ControllerContributorLessons.performView();
@@ -164,10 +164,10 @@ public class ViewContributorLessons {
 		tableLessons.getSelectionModel().selectedItemProperty().addListener(
 				(_, _, _) -> updateActionButtons());
 
-		setupButton(buttonCreate, 125, 20, 475);
-		setupButton(buttonView, 125, 155, 475);
-		setupButton(buttonEdit, 125, 290, 475);
-		setupButton(buttonDelete, 125, 425, 475);
+		setupButton(buttonCreate, 125, 20, 445);
+		setupButton(buttonView, 125, 155, 445);
+		setupButton(buttonEdit, 125, 290, 445);
+		setupButton(buttonDelete, 125, 425, 445);
 		guiTools.ASUTheme.styleDanger(buttonDelete);
 		buttonView.setTooltip(new Tooltip("Open the selected lesson and its experience records."));
 		buttonEdit.setTooltip(new Tooltip("Edit the unlocked fields of the selected lesson."));
@@ -190,6 +190,15 @@ public class ViewContributorLessons {
 		buttonLogout.setOnAction((_) -> ControllerContributorLessons.performLogout());
 		buttonQuit.setOnAction((_) -> ControllerContributorLessons.performQuit());
 
+        Button aiNew = new Button("AI New Lesson"), aiSelected = new Button("AI Selected Lesson");
+        setupButton(aiNew, 180, 20, 490); setupButton(aiSelected, 200, 215, 490);
+        aiNew.setOnAction(e -> guiAiAssistance.ViewAiAssistance.displayAssistance(theStage, theUser, guiTools.RoleNames.CONTRIBUTOR, null, null));
+        aiSelected.setOnAction(e -> {
+            var selected = getSelectedLesson();
+            if (selected == null) { showInformation("Select a lesson before opening AI assistance."); return; }
+            guiAiAssistance.ViewAiAssistance.displayAssistance(theStage, theUser, guiTools.RoleNames.CONTRIBUTOR, selected.getId(), null);
+        });
+        root.getChildren().addAll(aiNew, aiSelected);
 		root.getChildren().addAll(labelPageTitle, labelUser, labelStatus, fieldFilter,
 				buttonFilter, buttonClear, tableLessons, buttonCreate, buttonView, buttonEdit,
 				buttonDelete, buttonReturn, buttonLogout, buttonQuit);

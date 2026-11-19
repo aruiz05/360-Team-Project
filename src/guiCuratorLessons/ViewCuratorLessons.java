@@ -42,6 +42,7 @@ public class ViewCuratorLessons {
         Button search = new Button("Search"), all = new Button("Show All"), reload = new Button("Reload Selected");
         Button home = new Button("Curator Home");
         Button statistics = new Button("Statistics and Visibility");
+        Button ai = new Button("AI Assistance"); ai.setOnAction(e -> ControllerCuratorLessons.ai());
         statistics.setOnAction(e -> ControllerCuratorLessons.statistics());
         search.setOnAction(e -> ControllerCuratorLessons.search()); query.setOnAction(e -> ControllerCuratorLessons.search());
         all.setOnAction(e -> { query.clear(); ControllerCuratorLessons.search(); });
@@ -74,7 +75,7 @@ public class ViewCuratorLessons {
         identity = new Label("Select a lesson to review."); identity.setId("curator-identity");
         status = new Label(); status.setId("curator-status"); status.setWrapText(true);
         Label heading = new Label("Curator Lesson Review"); guiTools.ASUTheme.stylePageTitle(heading);
-        VBox root = new VBox(10, heading, new HBox(10, query, search, all, reload), identity, center, status, new HBox(10, statistics, home));
+        VBox root = new VBox(10, heading, new HBox(10, query, search, all, reload), identity, center, status, new HBox(10, ai, statistics, home));
         root.setPadding(new Insets(20)); Scene scene = new Scene(root, 1000, 720); guiTools.ASUTheme.apply(scene);
         stage.setScene(scene); stage.setTitle("CSE 360: Curator Lessons"); ControllerCuratorLessons.clear(); ControllerCuratorLessons.search(); stage.show();
     }
