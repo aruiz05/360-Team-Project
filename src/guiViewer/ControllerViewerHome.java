@@ -54,6 +54,11 @@ public class ControllerViewerHome {
 		guiUserUpdate.ViewUserUpdate.displayUserUpdate(ViewViewerHome.theStage, ViewViewerHome.theUser);
 	}
 
+    /** Open authorized lesson tools. Tested by TP3DiscoveryGuiTestingAutomation. */
+    protected static void performLessons() {
+        guiViewerLessons.ViewViewerLessons.displayViewerLessons(ViewViewerHome.theStage, ViewViewerHome.theUser);
+    }
+
 	/**********
 	 * <p> Method: performLogout() </p>
 	 *

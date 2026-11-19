@@ -54,6 +54,11 @@ public class ControllerCuratorHome {
 		guiUserUpdate.ViewUserUpdate.displayUserUpdate(ViewCuratorHome.theStage, ViewCuratorHome.theUser);
 	}
 
+    /** Open authorized lesson tools. Tested by TP3DiscoveryGuiTestingAutomation. */
+    protected static void performLessons() {
+        guiCuratorLessons.ViewCuratorLessons.displayCuratorLessons(ViewCuratorHome.theStage, ViewCuratorHome.theUser);
+    }
+
 	/**********
 	 * <p> Method: performLogout() </p>
 	 *

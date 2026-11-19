@@ -17,7 +17,7 @@ import entityClasses.User;
  * <p> Title: ViewCuratorHome Class. </p>
  *
  * <p> Description: The Java/FX-based Curator Home Page.  The page provides the Curator role entry workflow, account update, and logout.
- * Lesson tools are implemented in later Phase 3 work.</p>
+ * Lesson tools provide persistent discovery and review workflows.</p>
  *
  * <p> Copyright: Lynn Robert Carter © 2025 </p>
  *
@@ -56,8 +56,7 @@ public class ViewCuratorHome {
 	// This is a separator and it is used to partition the GUI for various tasks
 	protected static Line line_Separator1 = new Line(20, 95, width-20, 95);
 
-	// GUI ARea 2: This is a stub, so there are no widgets here.  For an actual role page, this are
-	// would contain the widgets needed for the user to play the assigned role.
+	// GUI Area 2: Opens this role's authorized lesson MVC workflow.
 
 
 
@@ -170,7 +169,10 @@ public class ViewCuratorHome {
 
 		// GUI Area 2
 
-			// This is a stub, so this area is empty
+		Button lessons = new Button("Review Lessons");
+            setupButtonUI(lessons, "Dialog", 18, 250, Pos.CENTER, 20, 140);
+            lessons.setOnAction(e -> ControllerCuratorHome.performLessons());
+            theRootPane.getChildren().add(lessons);
 
 
 		// GUI Area 3

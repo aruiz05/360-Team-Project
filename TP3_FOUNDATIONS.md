@@ -1,5 +1,8 @@
 # TP3 Role Access and Persistence Foundations
 
+This document records the first increment. See [TP3_DISCOVERY.md](TP3_DISCOVERY.md) for the
+Viewer discovery and Curator core operations now implemented on the same branch.
+
 This increment implements the role-access and safe-persistence step of the approved Phase 3
 plan. The baseline is `hw3` commit `bec1de6bdafad9a8962586ec02205203e96c1920`.
 

@@ -201,6 +201,11 @@ public class Database {
 				+ "PRIMARY KEY (experienceId, entryOrder), "
 				+ "FOREIGN KEY (experienceId) REFERENCES experienceRecords(id) ON DELETE CASCADE)";
 		statement.execute(effortTable);
+        // Additive migration leaves all existing TP1 and TP2 rows intact.
+        statement.execute("CREATE TABLE IF NOT EXISTS lessonSearchTerms ("
+                + "lessonId BIGINT NOT NULL, term VARCHAR(500) NOT NULL, "
+                + "PRIMARY KEY (lessonId, term), "
+                + "FOREIGN KEY (lessonId) REFERENCES lessons(id) ON DELETE CASCADE)");
 	}
 
 
@@ -1777,6 +1782,66 @@ public class Database {
 			}
 		}
 	}
+
+    /*******
+     * Read deterministic normalized terms. Tested by TP3DiscoveryTest.termsNormalizationAndClear.
+     * @param lessonId parent lesson key
+     * @return saved terms, possibly empty
+     * @throws SQLException on storage failure
+     */
+    public List<entityClasses.SearchTerm> getSearchTerms(long lessonId) throws SQLException {
+        List<entityClasses.SearchTerm> terms = new ArrayList<>();
+        try (PreparedStatement query = connection.prepareStatement(
+                "SELECT term FROM lessonSearchTerms WHERE lessonId=? ORDER BY term")) {
+            query.setLong(1, lessonId);
+            try (ResultSet rows = query.executeQuery()) {
+                while (rows.next()) terms.add(new entityClasses.SearchTerm(lessonId, rows.getString(1)));
+            }
+        }
+        return terms;
+    }
+
+    /*******
+     * Replace a reviewed term set within the caller's authorized parent-locked transaction.
+     * No inner commit may bypass a later failure. Tested by TP3DiscoveryTest.sqlFailureRollback.
+     * @param lessonId existing parent
+     * @param terms validated normalized terms
+     * @throws SQLException on missing transaction, mismatched parent, or storage failure
+     */
+    public void replaceSearchTerms(long lessonId, List<entityClasses.SearchTerm> terms) throws SQLException {
+        if (connection == null || connection.getAutoCommit())
+            throw new SQLException("Term replacement requires a transaction.");
+        for (entityClasses.SearchTerm term : terms)
+            if (term.getLessonId() != lessonId) throw new SQLException("Mismatched term parent.");
+        try (PreparedStatement query = connection.prepareStatement("DELETE FROM lessonSearchTerms WHERE lessonId=?")) {
+            query.setLong(1, lessonId); query.executeUpdate();
+        }
+        try (PreparedStatement query = connection.prepareStatement("INSERT INTO lessonSearchTerms (lessonId, term) VALUES (?, ?)")) {
+            for (entityClasses.SearchTerm term : terms) {
+                query.setLong(1, lessonId); query.setString(2, term.getTerm());
+                if (query.executeUpdate() != 1) throw new SQLException("Term was not saved.");
+            }
+        }
+    }
+
+    /*******
+     * Persist independent protections inside an authorized parent-locked transaction.
+     * Tested by TP3DiscoveryTest.independentLocks and serviceFailureRollback.
+     * @param lessonId existing parent key
+     * @param locks complete reviewed decision
+     * @return true if exactly one row changed
+     * @throws SQLException on missing transaction or storage failure
+     */
+    public boolean updateLessonLocks(long lessonId, lessonManagement.LessonLockState locks) throws SQLException {
+        if (connection == null || connection.getAutoCommit())
+            throw new SQLException("Lock updates require a transaction.");
+        try (PreparedStatement query = connection.prepareStatement(
+                "UPDATE lessons SET lessonLocked=?, titleLocked=?, problemLocked=?, lessonTextLocked=? WHERE id=?")) {
+            query.setBoolean(1, locks.isLessonLocked()); query.setBoolean(2, locks.isTitleLocked());
+            query.setBoolean(3, locks.isProblemSituationLocked()); query.setBoolean(4, locks.isLessonLearnedLocked());
+            query.setLong(5, lessonId); return query.executeUpdate() == 1;
+        }
+    }
 
 	// The following package-protected helpers seed Phase Three-owned state for HW2 tests.  They are
 	// deliberately unavailable to the contributor UI, which must respect but not create locks.
