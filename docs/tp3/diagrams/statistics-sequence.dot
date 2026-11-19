@@ -1,0 +1,18 @@
+digraph SaveSequence {
+ graph [rankdir=TB, bgcolor=white, dpi=160, ranksep=.32];
+ node [shape=box,style=rounded,fontname="Arial",fontsize=12,margin=.12];
+ edge [fontname="Arial",fontsize=10];
+ ui [label="ControllerCuratorStatistics.save\nModelCuratorStatistics.save"];
+ service [label="StatisticsService.save(actor, request)"];
+ auth [label="DiscoveryAccess.authorized\nDatabase.inTransaction\nRoleAccessService.requireRole"];
+ prepare [label="StatisticsService.prepare\nReload source IDs\nLock source and destination parents in sorted order"];
+ capture [label="Reload each source and effort list\nCapture fingerprint and validated values\nStatisticsCalculator.calculate"];
+ compare [shape=diamond,label="Reviewed fingerprints\nstill match?"];
+ insert [label="Database.insertStatisticsSummary\ninsertStatisticsSource for every input"];
+ commit [label="Commit once\nReturn reloaded hidden snapshot\nRefresh saved summaries"];
+ reject [label="Return corrective failure\nRollback all writes\nRequire new preview and review"];
+ ui -> service -> auth -> prepare -> capture -> compare;
+ compare -> insert [label="yes"]; insert -> commit;
+ prepare -> reject [label="invalid source",style=dashed]; auth -> reject [label="unauthorized",style=dashed];
+ compare -> reject [label="no"]; insert -> reject [label="SQL failure",style=dashed];
+}

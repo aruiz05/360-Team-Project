@@ -1,0 +1,21 @@
+digraph UseCases {
+ graph [rankdir=LR, bgcolor=white, dpi=160, nodesep=.35, ranksep=.55];
+ node [fontname="Arial", fontsize=12]; edge [arrowhead=none];
+ contributor [shape=plaintext,label="<<actor>>\nContributor"];
+ viewer [shape=plaintext,label="<<actor>>\nViewer"];
+ curator [shape=plaintext,label="<<actor>>\nCurator"];
+ subgraph clusterSystem {
+  label="Lessons Learned System Phase 3"; fontname="Arial"; fontsize=13;
+  node [shape=ellipse];
+  writing [label="Use interactive AI writing\nbrainstorming and example search"];
+  core [label="Maintain owned lessons\nand related experiences"];
+  discover [label="Browse search and read\nall lesson cores"];
+  refine [label="Review AI refinement\nand maintain search terms"];
+  statistics [label="Preview save and share\nhistorical statistics"];
+  shared [label="Read explicitly shared\nowned aggregates"];
+  locks [label="Control whole lesson\nand core field protections"];
+ }
+ contributor -> writing; contributor -> core; contributor -> shared;
+ viewer -> discover;
+ curator -> refine; curator -> statistics; curator -> locks;
+}

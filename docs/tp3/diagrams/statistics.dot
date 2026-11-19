@@ -1,0 +1,11 @@
+digraph Statistics {
+ graph [rankdir=TB, bgcolor=white, dpi=160, nodesep=.4, ranksep=.6];
+ node [shape=record, fontname="Arial", fontsize=11, margin=.13]; edge [fontname="Arial", fontsize=10];
+ summary [label="{StatisticsSummary| - id: long\l- destinationLessonId: long\l- createdAt: Instant\l- visibleToContributor: boolean\l- values: StatisticsValues\l- sources: List\<StatisticsSourceSnapshot\>\l- stale: boolean\l}"];
+ source [label="{StatisticsSourceSnapshot|- id: long\l- summaryId: long\l- originalLessonId: long\l- originalExperienceId: long\l- liveExperienceId: Long\l- elapsedMinutes: double\l- effortTotalMinutes: double\l- sourceFingerprint: String\l}"];
+ values [label="{StatisticsValues|- attemptCount: int\l- meanElapsedMinutes: double\l- medianElapsedMinutes: double\l- minElapsedMinutes: double\l- maxElapsedMinutes: double\l- meanEffortMinutes: double\l- medianEffortMinutes: double\l- minEffortMinutes: double\l- maxEffortMinutes: double\l}"];
+ shared [label="{SharedStatistics|- id: long\l- createdAt: Instant\l- values: StatisticsValues\l}"];
+ summary -> source [arrowhead=none,headlabel="2..*",taillabel="1",label="historical evidence"];
+ summary -> values [arrowhead=none,label="1"];
+ shared -> values [label="1",arrowhead=none];
+}

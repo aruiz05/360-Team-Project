@@ -9,7 +9,9 @@ import entityClasses.TeamMemberEffort;
  * <p> Title: ExperienceValidator Class. </p>
  *
  * <p> Description: Validates all required experience values and converts valid time and effort
- * text to finite nonnegative numbers with consistent units.</p>
+ * text to finite nonnegative numbers with consistent units. Names are checked against the H2
+ * 255-character capacity before writes. Tested by HW2TestingAutomation and
+ * TP3FinalIntegrationTest.inputBoundaries.</p>
  *
  * @author CSE 360 Team Project
  *
@@ -42,6 +44,8 @@ public class ExperienceValidator {
 		for (EffortInput effort : draft.getTeamEfforts()) {
 			if (effort == null || blank(effort.getMemberName()))
 				return OperationResult.failure("Enter a team member name.");
+			if (effort.getMemberName().trim().length() > 255)
+				return OperationResult.failure("Shorten each team member name to 255 characters or fewer.");
 			Double value = parseNonnegative(effort.getEffortMinutes());
 			if (value == null)
 				return OperationResult.failure(

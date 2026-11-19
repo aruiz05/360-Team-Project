@@ -54,7 +54,7 @@ public class TP3RoleNavigationTestingAutomation {
     private static void runNavigation() throws Exception {
         Platform.setImplicitExit(false);
         Stage stage = new Stage();
-        new FoundationsMain().start(stage);
+        new applicationMain.TP3().start(stage);
         check("Clean first-run application launch", true, stage.getTitle().contains("First User Account Setup"));
         User admin = user("Admin", true, false, false, false);
         User contributor = user("Owner", false, true, false, false);

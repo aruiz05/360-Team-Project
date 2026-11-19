@@ -44,10 +44,25 @@ for test in "${regressions[@]}"; do
     echo "PASS $test"
 done
 "$TP3_JDK/bin/java" -Dtp3.test.classpath="$classpath" -jar "$TP3_JUNIT_JAR" execute \
-    --class-path "$classpath" --select-class database.TP3FoundationsTest --select-class database.TP3DiscoveryTest --select-class database.TP3StatisticsTest --select-class database.AiAssistanceTest --select-class aiAssistance.OpenAiClientTest --details tree \
+    --class-path "$classpath" --select-class database.TP3FoundationsTest --select-class database.TP3DiscoveryTest --select-class database.TP3StatisticsTest --select-class database.AiAssistanceTest --select-class aiAssistance.OpenAiClientTest --select-class database.TP3FinalIntegrationTest --details tree \
     --disable-ansi-colors --fail-if-no-tests --reports-dir "$output_root/junit" \
     > "$output_root/logs/junit.log" 2>&1
-echo "PASS database.TP3FoundationsTest, database.TP3DiscoveryTest, database.TP3StatisticsTest, database.AiAssistanceTest and aiAssistance.OpenAiClientTest"
+echo "PASS database.TP3FoundationsTest, database.TP3DiscoveryTest, database.TP3StatisticsTest, database.AiAssistanceTest, aiAssistance.OpenAiClientTest and database.TP3FinalIntegrationTest"
+mkdir -p "$output_root/modular-smoke-classes" "$output_root/modular-home"
+"$TP3_JDK/bin/javac" --module-path "$output_root/module:$TP3_JAVAFX_LIB" --add-modules FoundationsF26 \
+    --add-exports FoundationsF26/applicationMain=ALL-UNNAMED --add-exports FoundationsF26/database=ALL-UNNAMED \
+    -d "$output_root/modular-smoke-classes" "$project_root/test/integration/TP3ModularSmoke.java"
+module_options=()
+if [[ -n "${TP3_MONOCLE_JAR:-}" ]]; then
+    module_options+=(--patch-module "javafx.graphics=$TP3_MONOCLE_JAR"
+        -Dglass.platform=Monocle -Dmonocle.platform=Headless -Dprism.order=sw
+        -Dheadless.geometry=1600x1000-32 -Dquantum.multithreaded=false)
+fi
+"$TP3_JDK/bin/java" --module-path "$output_root/module:$TP3_JAVAFX_LIB" --add-modules FoundationsF26 \
+    --add-exports FoundationsF26/applicationMain=ALL-UNNAMED --add-exports FoundationsF26/database=ALL-UNNAMED \
+    --enable-native-access=javafx.graphics "${module_options[@]}" -Duser.home="$output_root/modular-home" \
+    -cp "$output_root/modular-smoke-classes:$TP3_H2_JAR" integration.TP3ModularSmoke > "$output_root/logs/modular-launch.log" 2>&1
+echo "PASS integration.TP3ModularSmoke"
 gui_options=()
 gui_classpath="$classpath:$TP3_JAVAFX_LIB/*"
 if [[ -n "${TP3_MONOCLE_JAR:-}" ]]; then
@@ -74,7 +89,7 @@ mkdir -p "$output_root/ai-gui-home"
     -cp "$gui_classpath" guiTools.TP3AiGuiTestingAutomation > "$output_root/logs/ai-gui.log" 2>&1
 echo "PASS guiTools.TP3AiGuiTestingAutomation (explicit loopback provider fixture)"
 # An asynchronous renderer error may not change the Java process exit code.
-for gui_log in "$output_root/logs/gui.log" "$output_root/logs/discovery-gui.log" "$output_root/logs/statistics-gui.log" "$output_root/logs/ai-gui.log"; do
+for gui_log in "$output_root/logs/modular-launch.log" "$output_root/logs/gui.log" "$output_root/logs/discovery-gui.log" "$output_root/logs/statistics-gui.log" "$output_root/logs/ai-gui.log"; do
     while IFS= read -r line; do
         if [[ "$line" =~ ^[a-zA-Z_][a-zA-Z0-9_$.]*(Exception|Error)(:|$) ]]; then
             echo "GUI runtime error in $gui_log: $line" >&2

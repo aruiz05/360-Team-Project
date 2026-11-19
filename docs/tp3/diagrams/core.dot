@@ -1,0 +1,11 @@
+digraph Core {
+ graph [rankdir=TB, bgcolor=white, dpi=160, nodesep=.4, ranksep=.6];
+ node [shape=record, fontname="Arial", fontsize=11, margin=.13]; edge [fontname="Arial", fontsize=10];
+ lesson [label="{LessonsLearned|- id: long\l- owner: String\l- title: String\l- problemSituation: String\l- lessonLearned: String\l- lessonLocked: boolean\l- titleLocked: boolean\l- problemSituationLocked: boolean\l- lessonLearnedLocked: boolean\l}"];
+ experience [label="{ExperienceRecord|- id: long\l- lessonId: long\l- owner: String\l- whatWasDone: String\l- howItWasDone: String\l- elapsedMinutes: double\l- teamEfforts: List\<TeamMemberEffort\>\l- experienceLocked: boolean\l- whatWasDoneLocked: boolean\l- howItWasDoneLocked: boolean\l- elapsedTimeLocked: boolean\l- teamEffortLocked: boolean\l}"];
+ effort [label="{TeamMemberEffort|- memberName: String\l- effortMinutes: double\l}"];
+ term [label="{SearchTerm|- lessonId: long\l- term: String\l}"];
+ lesson -> experience [arrowhead=none,taillabel="1",headlabel="0..*",label="lessonId"];
+ lesson -> term [arrowhead=none,taillabel="1",headlabel="0..*",label="lessonId"];
+ experience -> effort [arrowhead=none,taillabel="1",headlabel="1..*",label="valid saved effort entries"];
+}

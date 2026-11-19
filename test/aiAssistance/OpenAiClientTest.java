@@ -76,8 +76,9 @@ public class OpenAiClientTest {
     /** Interrupted generation cancels the HTTP future and preserves the interrupted state. */
     @Test public void interruption() throws Exception {
         fixture.delayMillis = 700; var result = new java.util.concurrent.atomic.AtomicReference<OperationResult<AiSuggestion>>();
-        Thread worker = new Thread(() -> { result.set(fixture.client().generate(request(AiPurpose.WRITE))); assertTrue(Thread.currentThread().isInterrupted()); });
-        worker.start(); assertNotNull(fixture.requests.poll(2, TimeUnit.SECONDS)); worker.interrupt(); worker.join(2000); assertFalse(worker.isAlive()); assertFalse(result.get().isSuccessful());
+        var interrupted = new java.util.concurrent.atomic.AtomicBoolean();
+        Thread worker = new Thread(() -> { result.set(fixture.client().generate(request(AiPurpose.WRITE))); interrupted.set(Thread.currentThread().isInterrupted()); });
+        worker.start(); assertNotNull(fixture.requests.poll(2, TimeUnit.SECONDS)); worker.interrupt(); worker.join(2000); assertFalse(worker.isAlive()); assertTrue(interrupted.get()); assertFalse(result.get().isSuccessful());
     }
     /** Provider content is bounded during receipt and generated advice is bounded independently. */
     @Test public void oversizedResponses() {

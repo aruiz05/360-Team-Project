@@ -14,7 +14,7 @@ for name in 'New Code Javadoc' 'Test Code Javadoc'; do
 done
 mkdir -p "$output_root"
 production_sources=()
-for relative in database/Database.java entityClasses/User.java entityClasses/SearchTerm.java entityClasses/StatisticsValues.java entityClasses/StatisticsRequest.java \
+for relative in applicationMain/TP3.java lessonManagement/LessonValidator.java lessonManagement/ExperienceValidator.java database/Database.java entityClasses/User.java entityClasses/SearchTerm.java entityClasses/StatisticsValues.java entityClasses/StatisticsRequest.java \
     entityClasses/StatisticsPreview.java entityClasses/StatisticsSummary.java entityClasses/StatisticsSourceSnapshot.java entityClasses/SharedStatistics.java entityClasses/ViewerLesson.java guiTools/RoleNames.java \
     guiTools/GUISingleRoleDispatch.java lessonManagement/LessonService.java lessonManagement/DiscoveryAccess.java lessonManagement/StatisticsCalculator.java lessonManagement/StatisticsService.java \
     guiContributorLessonDetails/ViewContributorLessonDetails.java guiContributorLessons/ViewContributorLessons.java \

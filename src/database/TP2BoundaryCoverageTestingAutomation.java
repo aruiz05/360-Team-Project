@@ -450,7 +450,7 @@ public class TP2BoundaryCoverageTestingAutomation {
 			int lessonCount = context.database.getLessonCount();
 			assertFailure(context.service.createLesson(OWNER_A,
 					new LessonDraft(repeat('C', 501), "Problem", "Lesson")),
-					"The lesson could not be saved. Try again.");
+                    "Shorten the title to 500 characters or fewer.");
 			check(context.database.getLessonCount() == lessonCount,
 					"501-character title leaves lesson count unchanged", String.valueOf(lessonCount),
 					String.valueOf(context.database.getLessonCount()));

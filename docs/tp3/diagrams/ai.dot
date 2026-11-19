@@ -1,0 +1,13 @@
+digraph AI {
+ graph [rankdir=TB, bgcolor=white, dpi=160, nodesep=.35, ranksep=.55];
+ node [shape=record, fontname="Arial", fontsize=11, margin=.13]; edge [fontname="Arial", fontsize=10];
+ service [label="{AiAssistanceService|+ prepare(actor: String, role: String,\l request: AiRequest): OperationResult\<AiPreparedRequest\>\l+ generate(prepared: AiPreparedRequest):\l OperationResult\<AiSuggestion\>\l+ saveCore(actor: String, role: String,\l lessonId: Long, draft: LessonDraft):\l OperationResult\<LessonsLearned\>\l}"];
+ client [label="{\<\<interface\>\> AiClient|+ generate(request: AiRequest):\l OperationResult\<AiSuggestion\>\l}"];
+ impl [label="{OpenAiClient|- endpoint: URI\l- key: String\l- model: String\l- timeout: Duration\l- http: HttpClient\l}"];
+ request [label="{AiRequest|- purpose: AiPurpose\l- lessonId: Long\l- draft: LessonDraft\l- prompt: String\l- history: List\<AiTurn\>\l}"];
+ suggestion [label="{AiSuggestion|- text: String\l- core: LessonDraft\l- terms: List\<String\>\l- sources: List\<AiSource\>\l- conversationText: String\l}"];
+ service -> client [label="uses"];
+ impl -> client [style=dashed,arrowhead=empty,label="implements"];
+ client -> request [label="input",arrowhead=none];
+ client -> suggestion [label="unsaved output",arrowhead=none];
+}

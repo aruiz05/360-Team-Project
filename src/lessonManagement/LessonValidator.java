@@ -3,7 +3,9 @@ package lessonManagement;
 /*******
  * <p> Title: LessonValidator Class. </p>
  *
- * <p> Description: Validates the three required lesson fields before the database is changed.</p>
+ * <p> Description: Validates required core text and the persistent 500-character title limit
+ * before storage. Tested by HW2TestingAutomation, TP2BoundaryCoverageTestingAutomation and
+ * TP3FinalIntegrationTest.inputBoundaries.</p>
  *
  * @author CSE 360 Team Project
  *
@@ -20,6 +22,7 @@ public class LessonValidator {
 	 */
 	public static String validate(LessonDraft draft) {
 		if (draft == null || blank(draft.getTitle())) return "Enter a lesson title.";
+		if (draft.getTitle().trim().length() > 500) return "Shorten the title to 500 characters or fewer.";
 		if (blank(draft.getProblemSituation())) return "Enter the problem or situation.";
 		if (blank(draft.getLessonLearned())) return "Enter the lesson learned.";
 		return "";

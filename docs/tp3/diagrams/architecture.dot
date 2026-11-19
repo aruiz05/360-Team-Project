@@ -1,0 +1,15 @@
+digraph Architecture {
+ graph [rankdir=TB, bgcolor="white", nodesep=.35, ranksep=.5, dpi=160];
+ node [shape=box, style=rounded, fontname="Arial", fontsize=12, margin=.16];
+ edge [fontname="Arial", fontsize=10];
+ mvc [label="JavaFX MVC packages\nguiContributorLessons and guiContributorLessonDetails\nguiViewerLessons and guiCuratorLessons\nguiCuratorStatistics and guiContributorStatistics\nguiAiAssistance"];
+ access [label="RoleAccessService\nCurrent persisted role checks"];
+ services [label="LessonService and CuratorLessonService\nViewerLessonService and StatisticsService\nAiAssistanceService"];
+ db [label="Database\nFile-backed H2 and additive schema\nTransactions and parent-row locks"];
+ provider [label="AiClient interface\nOpenAiClient\nOpenAI Responses API over HTTPS"];
+ mvc -> services [label="models submit authenticated context"];
+ services -> access [label="authorize"];
+ services -> db [label="validate read and write"];
+ access -> db [label="findUserForRoleAccess"];
+ services -> provider [label="prepared request on worker only"];
+}
