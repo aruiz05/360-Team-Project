@@ -61,7 +61,7 @@ public class ControllerAddRemoveRoles {
 		ViewAddRemoveRoles.theSelectedUser = 
 				(String) ViewAddRemoveRoles.combobox_SelectUser.getValue();
 		if (ViewAddRemoveRoles.theSelectedUser == null) return;
-		theDatabase.getUserAccountDetails(ViewAddRemoveRoles.theSelectedUser);
+
 		setupSelectedUser();
 	}
 	
@@ -124,58 +124,20 @@ public class ControllerAddRemoveRoles {
 	 * 
 	 */
 	private static void setupSelectedUser() {
-		// Create the list of roles that could be added for the currently selected user (e.g., Do
-		// not show a role to add that the user already has!)
-		ViewAddRemoveRoles.addList.clear();
-		ViewAddRemoveRoles.addList.add("<Select a role>");
-		if (!theDatabase.getCurrentAdminRole())
-			ViewAddRemoveRoles.addList.add(guiTools.RoleNames.ADMIN);
-		if (!theDatabase.getCurrentNewRole1())
-			ViewAddRemoveRoles.addList.add(guiTools.RoleNames.CONTRIBUTOR);
-		if (!theDatabase.getCurrentNewRole2())
-			ViewAddRemoveRoles.addList.add(guiTools.RoleNames.ROLE_2);
-
-		// Create the list of roles that could be removed for the currently selected user (e.g., Do
-		// not show a role to remove that the user does not have!)
-		ViewAddRemoveRoles.removeList.clear();
-		ViewAddRemoveRoles.removeList.add("<Select a role>");
-		if (theDatabase.getCurrentAdminRole())
-			ViewAddRemoveRoles.removeList.add(guiTools.RoleNames.ADMIN);
-		if (theDatabase.getCurrentNewRole1())
-			ViewAddRemoveRoles.removeList.add(guiTools.RoleNames.CONTRIBUTOR);
-		if (theDatabase.getCurrentNewRole2())
-			ViewAddRemoveRoles.removeList.add(guiTools.RoleNames.ROLE_2);
-		
-		// Create the list or roles that the user currently has with proper use of a comma between
-		// items
-		boolean notTheFirst = false;
-		String theCurrentRoles = "";
-		
-		// Admin role - It can only be at the head of a list
-		if (theDatabase.getCurrentAdminRole()) {
-			theCurrentRoles += "Admin";
-			notTheFirst = true;
-		}
-		
-		// Roles 1 - It could be at the head of the list or later in the list
-		if (theDatabase.getCurrentNewRole1()) {
-			if (notTheFirst)
-				theCurrentRoles += ", " + guiTools.RoleNames.CONTRIBUTOR;
-			else {
-				theCurrentRoles += guiTools.RoleNames.CONTRIBUTOR;
-				notTheFirst = true;
-			}
-		}
-
-		// Roles 2 - It could be at the head of the list or later in the list
-		if (theDatabase.getCurrentNewRole2()) {
-			if (notTheFirst)
-				theCurrentRoles += ", Role2"; 
-			else {
-				theCurrentRoles += "Role2";
-				notTheFirst = true;
-			}
-		}
+        entityClasses.User selected = theDatabase.getAllUsers().stream()
+                .filter(user -> user.getUserName().equals(ViewAddRemoveRoles.theSelectedUser))
+                .findFirst().orElse(null);
+        java.util.List<String> assigned = guiTools.RoleNames.assignedRoles(selected);
+        ViewAddRemoveRoles.addList.clear();
+        ViewAddRemoveRoles.addList.add("<Select a role>");
+        ViewAddRemoveRoles.removeList.clear();
+        ViewAddRemoveRoles.removeList.add("<Select a role>");
+        for (String role : java.util.List.of(guiTools.RoleNames.ADMIN, guiTools.RoleNames.CONTRIBUTOR,
+                guiTools.RoleNames.VIEWER, guiTools.RoleNames.CURATOR)) {
+            if (assigned.contains(role)) ViewAddRemoveRoles.removeList.add(role);
+            else ViewAddRemoveRoles.addList.add(role);
+        }
+        String theCurrentRoles = String.join(", ", assigned);
 
 		// Given the above actions, populate the related widgets with the new values
 		ViewAddRemoveRoles.label_CurrentRoles.setText("This user's current roles: " + 
@@ -217,15 +179,18 @@ public class ControllerAddRemoveRoles {
 			
 			// If an actual role was selected, update the database entry for that user for the role
 			if (theDatabase.updateUserRole(ViewAddRemoveRoles.theSelectedUser,
-					guiTools.RoleNames.toStoredRole(ViewAddRemoveRoles.theAddRole), "true") ) {
+					guiTools.RoleNames.toStoredRole(ViewAddRemoveRoles.theAddRole), "true",
+                    ViewAddRemoveRoles.theUser.getUserName()) ) {
 				ViewAddRemoveRoles.combobox_SelectRoleToAdd = new ComboBox <String>();
 				ViewAddRemoveRoles.combobox_SelectRoleToAdd.setItems(FXCollections.
 					observableArrayList(ViewAddRemoveRoles.addList));
 				ViewAddRemoveRoles.combobox_SelectRoleToAdd.getSelectionModel().clearAndSelect(0);		
-				setupSelectedUser();
-			}
-		}
-	}
+                setupSelectedUser();
+            } else {
+                showRoleError("The role could not be added. Verify your Admin access and selected account.");
+            }
+        }
+    }
 	
 	
 	/**********
@@ -251,23 +216,20 @@ public class ControllerAddRemoveRoles {
 				return;
 			}
 
-			// Every account must retain at least one role so it has a valid destination after login
-			if (RoleAssignmentValidator.isLastAssignedRole(theDatabase.getCurrentAdminRole(),
-					theDatabase.getCurrentNewRole1(), theDatabase.getCurrentNewRole2())) {
-				showRoleError("A user must have at least one assigned role.");
-				return;
-			}
 
 			// If an actual role was selected, update the database entry for that user for the role
 			if (theDatabase.updateUserRole(ViewAddRemoveRoles.theSelectedUser, 
-					guiTools.RoleNames.toStoredRole(ViewAddRemoveRoles.theRemoveRole), "false") ) {
+					guiTools.RoleNames.toStoredRole(ViewAddRemoveRoles.theRemoveRole), "false",
+                    ViewAddRemoveRoles.theUser.getUserName()) ) {
 				ViewAddRemoveRoles.combobox_SelectRoleToRemove = new ComboBox <String>();
 				ViewAddRemoveRoles.combobox_SelectRoleToRemove.setItems(FXCollections.
 					observableArrayList(ViewAddRemoveRoles.addList));
 				ViewAddRemoveRoles.combobox_SelectRoleToRemove.getSelectionModel().
 					clearAndSelect(0);		
-				setupSelectedUser();
-			}				
+                setupSelectedUser();
+            } else {
+                showRoleError("The role could not be removed. Keep at least one role and verify your Admin access.");
+            }
 		}
 	}
 

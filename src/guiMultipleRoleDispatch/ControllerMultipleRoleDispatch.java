@@ -51,39 +51,15 @@ public class ControllerMultipleRoleDispatch {
 	 */
 	static protected void performRole() {
 		
-		// Fetch the role from the SelectRole ComboBox
-		String role = guiMultipleRoleDispatch.ViewMultipleRoleDispatch.combobox_SelectRole.getValue();
-
-		// See if Admin
-		if (guiTools.RoleNames.ADMIN.equals(role)) {
-			
-			// It is Admin Role
-			guiAdminHome.ViewAdminHome.displayAdminHome(
-					guiMultipleRoleDispatch.ViewMultipleRoleDispatch.theStage, 
-					guiMultipleRoleDispatch.ViewMultipleRoleDispatch.theUser);
-			
-		// See if Role1
-		} else if (guiTools.RoleNames.isContributor(role)) {
-
-			// It is Role1 Role
-			guiRole1.ViewRole1Home.displayRole1Home(
-					guiMultipleRoleDispatch.ViewMultipleRoleDispatch.theStage, 
-					guiMultipleRoleDispatch.ViewMultipleRoleDispatch.theUser);
-			
-		// See if Role2
-		} else if (guiTools.RoleNames.ROLE_2.equals(role)) {
-			
-			// It is Role 2 Role
-			guiRole2.ViewRole2Home.displayRole2Home(
-					guiMultipleRoleDispatch.ViewMultipleRoleDispatch.theStage, 
-					guiMultipleRoleDispatch.ViewMultipleRoleDispatch.theUser);
-			
-		} else {
-			// Invalid role
-			System.out.println("*** ERROR *** GUIMultipleRoleDispatch was asked to dispatch to " +
-					"a role, " + role + ", that is not supported!");
-			System.exit(0);
-		}
+        String role = ViewMultipleRoleDispatch.combobox_SelectRole.getValue();
+        if (role == null || role.equals("<Select a role>")) {
+            javafx.scene.control.Alert error = new javafx.scene.control.Alert(
+                    javafx.scene.control.Alert.AlertType.ERROR, "Select an assigned role.");
+            error.showAndWait();
+            return;
+        }
+        guiTools.GUISingleRoleDispatch.dispatchRole(ViewMultipleRoleDispatch.theStage,
+                ViewMultipleRoleDispatch.theUser, role);
 	}
 	
 	

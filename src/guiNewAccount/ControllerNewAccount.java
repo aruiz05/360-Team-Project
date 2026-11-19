@@ -104,10 +104,13 @@ public class ControllerNewAccount {
 			} else if (guiTools.RoleNames.isContributor(ViewNewAccount.theRole)) {
 				roleCode = 2;
 				user = new User(username, password, "", "", "", "", "", false, true, false);
-			} else if (guiTools.RoleNames.ROLE_2.equals(ViewNewAccount.theRole)) {
+			} else if (guiTools.RoleNames.VIEWER.equals(guiTools.RoleNames.toDisplayRole(ViewNewAccount.theRole))) {
 				roleCode = 3;
 				user = new User(username, password, "", "", "", "", "", false, false, true);
-			} else {
+            } else if (guiTools.RoleNames.CURATOR.equals(ViewNewAccount.theRole)) {
+                roleCode = 4;
+                user = new User(username, password, "", "", "", "", "", false, false, false, true);
+            } else {
 				System.out.println(
 						"**** Trying to create a New Account for a role that does not exist!");
 				System.exit(0);

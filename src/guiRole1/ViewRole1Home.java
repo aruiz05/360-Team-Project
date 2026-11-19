@@ -116,7 +116,8 @@ public class ViewRole1Home {
 		
 		// Establish the references to the GUI and the current user
 		theStage = ps;
-		theUser = user;
+		theUser = guiTools.GUISingleRoleDispatch.requireRoleForView(ps, user, guiTools.RoleNames.CONTRIBUTOR);
+        if (theUser == null) return;
 		
 		// If not yet established, populate the static aspects of the GUI
 		if (theView == null) theView = new ViewRole1Home();		// Instantiate singleton if needed

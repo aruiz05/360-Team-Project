@@ -73,7 +73,12 @@ public class ControllerAdminHome {
 		// Inform the user that the invitation has been sent and display the invitation code
 		String theSelectedRole = (String) ViewAdminHome.combobox_SelectRole.getValue();
 		String invitationCode = theDatabase.generateInvitationCode(emailAddress,
-				guiTools.RoleNames.toStoredRole(theSelectedRole));
+				guiTools.RoleNames.toStoredRole(theSelectedRole), ViewAdminHome.theUser.getUserName());
+        if (invitationCode == null) {
+            ViewAdminHome.alertEmailError.setContentText("The invitation could not be saved. Check your Admin access and try again.");
+            ViewAdminHome.alertEmailError.showAndWait();
+            return;
+        }
 		String msg = "Code: " + invitationCode + " for role " + theSelectedRole + 
 				" was sent to: " + emailAddress;
 		System.out.println(msg);

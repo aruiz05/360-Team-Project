@@ -28,6 +28,9 @@ public class User {
     private boolean adminRole;
     private boolean role1;
     private boolean role2;
+
+    /** Curator is separate from legacy Role2 so migration never grants editing privileges. */
+    private boolean curatorRole;
     
     
     /*****
@@ -81,6 +84,34 @@ public class User {
         this.role1 = r2;
         this.role2 = r3;
     }
+
+    /**********
+     * Construct a Phase 3 account while retaining the three-role constructor for TP1 and TP2.
+     * Tested by TP3FoundationsTest.roleNamesAndAccounts and rolePersistenceAcrossProcesses.
+     *
+     * @param userName specifies the account identifier
+     * @param password specifies the account password
+     * @param fn specifies the first name
+     * @param mn specifies the middle name
+     * @param ln specifies the last name
+     * @param pfn specifies the preferred first name
+     * @param ea specifies the email address
+     * @param admin specifies the Admin assignment
+     * @param contributor specifies the stored Role1 assignment
+     * @param viewer specifies the stored Role2 assignment
+     * @param curator specifies the independent Curator assignment
+     */
+    public User(String userName, String password, String fn, String mn, String ln, String pfn,
+            String ea, boolean admin, boolean contributor, boolean viewer, boolean curator) {
+        this(userName, password, fn, mn, ln, pfn, ea, admin, contributor, viewer);
+        this.curatorRole = curator;
+    }
+
+    /** @return the Curator assignment; tested by TP3FoundationsTest.roleNamesAndAccounts */
+    public boolean getCuratorRole() { return curatorRole; }
+
+    /** @param role specifies the Curator assignment; tested by TP3FoundationsTest.roleNamesAndAccounts */
+    public void setCuratorRole(boolean role) { curatorRole = role; }
 
     
     /*****
@@ -267,6 +298,7 @@ public class User {
     	if (adminRole) numRoles++;
     	if (role1) numRoles++;
     	if (role2) numRoles++;
+        if (curatorRole) numRoles++;
     	return numRoles;
     }
 }

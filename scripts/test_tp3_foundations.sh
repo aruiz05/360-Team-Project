@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# Compile the modular application, then run isolated classpath tests without adding JUnit to
+# the production module. See TP3_FOUNDATIONS.md for the dependency paths and Eclipse setup.
+set -euo pipefail
+: "${TP3_JDK:?Set TP3_JDK to a JDK 25 installation}"
+: "${TP3_JAVAFX_LIB:?Set TP3_JAVAFX_LIB to the JavaFX lib directory}"
+: "${TP3_H2_JAR:?Set TP3_H2_JAR to the H2 jar}"
+: "${TP3_JUNIT_JAR:?Set TP3_JUNIT_JAR to the JUnit Platform standalone jar}"
+project_root=$(cd "$(dirname "$0")/.." && pwd)
+output_root=${TP3_TEST_OUTPUT:-$(mktemp -d "${TMPDIR:-/tmp}/tp3-foundations.XXXXXX")}
+mkdir -p "$output_root"
+if [[ -e "$output_root/classes" ]]; then
+    echo "Choose a new TP3_TEST_OUTPUT directory; existing test output will not be overwritten." >&2
+    exit 1
+fi
+mkdir -p "$output_root/classes" "$output_root/module" "$output_root/logs" "$output_root/gui-home"
+production_sources=()
+all_sources=()
+while IFS= read -r source; do
+    production_sources+=("$source")
+    [[ "$source" == */module-info.java ]] || all_sources+=("$source")
+done < <(find "$project_root/src" -name '*.java' -print | sort)
+while IFS= read -r source; do all_sources+=("$source"); done < <(find "$project_root/test" -name '*.java' -print | sort)
+"$TP3_JDK/bin/javac" --module-path "$TP3_JAVAFX_LIB" --add-modules javafx.controls,javafx.fxml \
+    -cp "$TP3_H2_JAR" -d "$output_root/module" "${production_sources[@]}" \
+    > "$output_root/logs/module-compile.log" 2>&1
+"$TP3_JDK/bin/javac" -cp "$TP3_JAVAFX_LIB/*:$TP3_H2_JAR:$TP3_JUNIT_JAR" \
+    -d "$output_root/classes" "${all_sources[@]}" > "$output_root/logs/test-compile.log" 2>&1
+cp "$project_root/src/applicationMain/application.css" "$output_root/classes/applicationMain/"
+classpath="$output_root/classes:$TP3_H2_JAR"
+regressions=(
+    database.OneTimePasswordDatabaseTestingAutomation
+    database.DeleteUserDatabaseTestingAutomation
+    database.ListUsersDatabaseTestingAutomation
+    database.AddRemoveRolesDatabaseTestingAutomation
+    guiAddRemoveRoles.AddRemoveRolesTestingAutomation
+    database.HW2TestingAutomation
+    database.TP2BoundaryCoverageTestingAutomation
+    lessonManagement.ExperienceLockPolicyTestingAutomation
+    inputValidation.PasswordEvaluatorTestingAutomation
+)
+for test in "${regressions[@]}"; do
+    "$TP3_JDK/bin/java" -cp "$classpath" "$test" > "$output_root/logs/$test.log" 2>&1
+    echo "PASS $test"
+done
+"$TP3_JDK/bin/java" -Dtp3.test.classpath="$classpath" -jar "$TP3_JUNIT_JAR" execute \
+    --class-path "$classpath" --select-class database.TP3FoundationsTest --details tree \
+    --disable-ansi-colors --fail-if-no-tests --reports-dir "$output_root/junit" \
+    > "$output_root/logs/junit.log" 2>&1
+echo "PASS database.TP3FoundationsTest"
+gui_options=()
+gui_classpath="$classpath:$TP3_JAVAFX_LIB/*"
+if [[ -n "${TP3_MONOCLE_JAR:-}" ]]; then
+    gui_options+=(-Dglass.platform=Monocle -Dmonocle.platform=Headless -Dprism.order=sw)
+    gui_classpath="$gui_classpath:$TP3_MONOCLE_JAR"
+fi
+"$TP3_JDK/bin/java" --enable-native-access=ALL-UNNAMED \
+    -Duser.home="$output_root/gui-home" -Dtp3.isolated.gui.test=true "${gui_options[@]}" \
+    -cp "$gui_classpath" guiTools.TP3RoleNavigationTestingAutomation > "$output_root/logs/gui.log" 2>&1
+echo "PASS guiTools.TP3RoleNavigationTestingAutomation"
+echo "All foundation and regression suites passed. Logs: $output_root"

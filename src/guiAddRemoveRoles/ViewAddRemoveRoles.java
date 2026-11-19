@@ -135,7 +135,8 @@ public class ViewAddRemoveRoles {
 		
 		// Establish the references to the GUI and the current user
 		theStage = ps;
-		theUser = user;
+		theUser = guiTools.GUISingleRoleDispatch.requireRoleForView(ps, user, guiTools.RoleNames.ADMIN);
+        if (theUser == null) return;
 		
 		// If not yet established, populate the static aspects of the GUI by creating the 
 		// singleton instance of this class

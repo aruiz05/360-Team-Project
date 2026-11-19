@@ -515,6 +515,22 @@ public class ExperienceLockPolicyTestingAutomation {
 			this.experience = experience;
 		}
 
+        // This policy test double has no JDBC connection. Real transaction and authorization
+        // behavior is exercised separately by TP3FoundationsTest against file-backed H2.
+        @Override
+        public <T> T inTransaction(Database.TransactionWork<T> work) throws SQLException {
+            return work.execute();
+        }
+
+        @Override
+        public entityClasses.User findUserForRoleAccess(String username) {
+            if (lesson == null || !lesson.getOwner().equals(username)) return null;
+            return new entityClasses.User(username, "", "", "", "", "", "", false, true, false);
+        }
+
+        @Override
+        public boolean lockLesson(long id) { return lesson != null && lesson.getId() == id; }
+
 		@Override
 		public LessonsLearned getLesson(long id) throws SQLException {
 			return lesson != null && lesson.getId() == id ? lesson : null;

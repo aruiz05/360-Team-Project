@@ -1071,7 +1071,8 @@ public class HW2TestingAutomation {
 		private final Database database;
 		private final LessonService service;
 
-		private TestContext(Database database) {
+		private TestContext(Database database) throws java.sql.SQLException {
+            ContributorTestAccounts.register(database);
 			this.database = database;
 			service = new LessonService(database);
 		}

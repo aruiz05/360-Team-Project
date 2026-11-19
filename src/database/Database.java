@@ -4,6 +4,9 @@ import java.sql.*;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Savepoint;
+import guiTools.RoleNames;
+import lessonManagement.OperationResult;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
@@ -65,6 +68,8 @@ public class Database {
 	private boolean currentAdminRole;
 	private boolean currentNewRole1;
 	private boolean currentNewRole2;
+	/** Current account Curator flag; role lookup itself never changes this cache. */
+	private boolean currentCuratorRole;
 
 	/*******
 	 * <p> Method: Database </p>
@@ -108,7 +113,7 @@ public class Database {
 
 			createTables();  // Create the necessary tables if they don't exist
 		} catch (ClassNotFoundException e) {
-			System.err.println("JDBC Driver not found: " + e.getMessage());
+			throw new SQLException("The H2 database driver is unavailable.", e);
 		}
 	}
 
@@ -146,6 +151,10 @@ public class Database {
 		statement.execute("ALTER TABLE userDB ADD COLUMN IF NOT EXISTS " +
 				"passwordResetRequired BOOL DEFAULT FALSE");
 		
+		// Additive migration preserves existing accounts; no legacy account gains Curator.
+		statement.execute("ALTER TABLE userDB ADD COLUMN IF NOT EXISTS " +
+				"curatorRole BOOL DEFAULT FALSE NOT NULL");
+
 		// Create the invitation codes table
 	    String invitationCodesTable = "CREATE TABLE IF NOT EXISTS InvitationCodes ("
 	            + "code VARCHAR(10) PRIMARY KEY, "
@@ -250,8 +259,8 @@ public class Database {
  */
 	public void register(User user) throws SQLException {
 		String insertUser = "INSERT INTO userDB (userName, password, firstName, middleName, "
-				+ "lastName, preferredFirstName, emailAddress, adminRole, newRole1, newRole2) "
-				+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+				+ "lastName, preferredFirstName, emailAddress, adminRole, newRole1, newRole2, curatorRole) "
+				+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 		try (PreparedStatement pstmt = connection.prepareStatement(insertUser)) {
 			currentUsername = user.getUserName();
 			pstmt.setString(1, currentUsername);
@@ -282,6 +291,8 @@ public class Database {
 			
 			currentNewRole2 = user.getNewRole2();
 			pstmt.setBoolean(10, currentNewRole2);
+			currentCuratorRole = user.getCuratorRole();
+			pstmt.setBoolean(11, currentCuratorRole);
 			
 			pstmt.executeUpdate();
 		}
@@ -326,7 +337,7 @@ public class Database {
 	    List<User> users = new ArrayList<User>();
 
 	    String query = "SELECT userName, firstName, middleName, lastName, "
-	            + "preferredFirstName, emailAddress, adminRole, newRole1, newRole2 "
+	            + "preferredFirstName, emailAddress, adminRole, newRole1, newRole2, curatorRole "
 	            + "FROM userDB ORDER BY userName";
 
 	    try (PreparedStatement pstmt = connection.prepareStatement(query)) {
@@ -345,7 +356,8 @@ public class Database {
 	                    rs.getString("emailAddress"),
 	                    rs.getBoolean("adminRole"),
 	                    rs.getBoolean("newRole1"),
-	                    rs.getBoolean("newRole2")
+	                    rs.getBoolean("newRole2"),
+                        rs.getBoolean("curatorRole")
 	            );
 
 	            users.add(user);
@@ -512,6 +524,7 @@ public class Database {
 		if (user.getAdminRole()) numberOfRoles++;
 		if (user.getNewRole1()) numberOfRoles++;
 		if (user.getNewRole2()) numberOfRoles++;
+		if (user.getCuratorRole()) numberOfRoles++;
 		return numberOfRoles;
 	}	
 
@@ -532,8 +545,10 @@ public class Database {
 	 * 
 	 */
 	// Generates a new invitation code and inserts it into the database.
-	public String generateInvitationCode(String emailAddress, String role) {
-	    String code = UUID.randomUUID().toString().substring(0, 6); // Generate a random 6-character code
+	String generateInvitationCode(String emailAddress, String role) {
+	    if (emailAddress == null || emailAddress.isBlank() || !RoleNames.isSupported(role)) return null;
+        role = RoleNames.toStoredRole(role);
+        String code = UUID.randomUUID().toString().substring(0, 6); // Generate a random 6-character code
 	    String query = "INSERT INTO InvitationCodes (code, emailaddress, role) VALUES (?, ?, ?)";
 
 	    try (PreparedStatement pstmt = connection.prepareStatement(query)) {
@@ -542,7 +557,7 @@ public class Database {
 	        pstmt.setString(3, role);
 	        pstmt.executeUpdate();
 	    } catch (SQLException e) {
-	        e.printStackTrace();
+	        return null;
 	    }
 	    return code;
 	}
@@ -964,7 +979,7 @@ public class Database {
 		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
 			pstmt.setString(1, username);
 	        ResultSet rs = pstmt.executeQuery();			
-			rs.next();
+			if (!rs.next()) return false;
 	    	currentUsername = rs.getString(2);
 	    	currentPassword = rs.getString(3);
 	    	currentFirstName = rs.getString(4);
@@ -974,7 +989,8 @@ public class Database {
 	    	currentEmailAddress = rs.getString(8);
 	    	currentAdminRole = rs.getBoolean(9);
 	    	currentNewRole1 = rs.getBoolean(10);
-	    	currentNewRole2 = rs.getBoolean(11);
+            currentNewRole2 = rs.getBoolean("newRole2");
+            currentCuratorRole = rs.getBoolean("curatorRole");
 			return true;
 	    } catch (SQLException e) {
 			return false;
@@ -1102,14 +1118,15 @@ public class Database {
 	 *  
 	 */
 	// Update a users role
-	public boolean updateUserRole(String username, String role, String value) {
+	boolean updateUserRole(String username, String role, String value) {
 		if (username == null || username.isBlank() || role == null || value == null ||
 				(!value.equals("true") && !value.equals("false"))) return false;
 
 		String column;
 		if (role.equals("Admin")) column = "adminRole";
-		else if (role.equals("Role1")) column = "newRole1";
-		else if (role.equals("Role2")) column = "newRole2";
+		else if (role.equals("Role1") || role.equals("Contributor")) column = "newRole1";
+		else if (role.equals("Role2") || role.equals("Viewer")) column = "newRole2";
+		else if (role.equals("Curator")) column = "curatorRole";
 		else return false;
 
 		boolean roleValue = Boolean.parseBoolean(value);
@@ -1121,9 +1138,8 @@ public class Database {
 			pstmt.setString(2, username);
 			if (pstmt.executeUpdate() != 1) return false;
 
-			if (role.equals("Admin")) currentAdminRole = roleValue;
-			else if (role.equals("Role1")) currentNewRole1 = roleValue;
-			else currentNewRole2 = roleValue;
+            // Editing another account must not overwrite the cached signed-in account's roles.
+            if (username.equals(currentUsername)) getUserAccountDetails(username);
 			return true;
 		} catch (SQLException e) {
 			return false;
@@ -1139,7 +1155,7 @@ public class Database {
 	 * @return the number of assigned roles, or -1 if the account cannot be found
 	 */
 	private int getUserRoleCount(String username) {
-		String query = "SELECT adminRole, newRole1, newRole2 FROM userDB WHERE username = ?";
+		String query = "SELECT adminRole, newRole1, newRole2, curatorRole FROM userDB WHERE username = ?";
 		try (PreparedStatement pstmt = connection.prepareStatement(query)) {
 			pstmt.setString(1, username);
 			ResultSet rs = pstmt.executeQuery();
@@ -1149,6 +1165,7 @@ public class Database {
 			if (rs.getBoolean("adminRole")) count++;
 			if (rs.getBoolean("newRole1")) count++;
 			if (rs.getBoolean("newRole2")) count++;
+			if (rs.getBoolean("curatorRole")) count++;
 			return count;
 		} catch (SQLException e) {
 			return -1;
@@ -1272,6 +1289,180 @@ public class Database {
 	HW2 lesson and experience persistence
 
 	**********************************************************************************************/
+
+    /*******
+     * <p> Title: TransactionWork Interface. </p>
+     * <p> Description: One operation on this Database connection, not background network work.
+     * Tested by TP3FoundationsTest.nestedTransactionsDoNotCommitOuterWork.</p>
+     * @param <T> specifies the operation result type
+     */
+    @FunctionalInterface
+    public interface TransactionWork<T> {
+        /**
+         * @return the operation result
+         * @throws SQLException when storage fails
+         */
+        T execute() throws SQLException;
+    }
+
+    /**********
+     * Execute a complete operation atomically. Nested operations use savepoints instead of
+     * committing their caller's changes. An unsuccessful OperationResult also rolls back.
+     * Tested by TP3FoundationsTest transaction and rollback cases.
+     * @param <T> specifies the result type
+     * @param work specifies the operation on this database
+     * @return the completed result, including a rejected result after rollback
+     * @throws SQLException when storage or transaction management fails
+     */
+    public synchronized <T> T inTransaction(TransactionWork<T> work) throws SQLException {
+        if (work == null) throw new IllegalArgumentException("A database operation is required.");
+        if (connection == null || connection.isClosed())
+            throw new SQLException("Connect to the database before starting an operation.");
+        User cachedBefore = new User(currentUsername, currentPassword, currentFirstName,
+                currentMiddleName, currentLastName, currentPreferredFirstName, currentEmailAddress,
+                currentAdminRole, currentNewRole1, currentNewRole2, currentCuratorRole);
+        boolean owner = connection.getAutoCommit();
+        Savepoint savepoint = null;
+        if (owner) connection.setAutoCommit(false);
+        else savepoint = connection.setSavepoint();
+        try {
+            T result = work.execute();
+            boolean rejected = result instanceof OperationResult<?> operation
+                    && !operation.isSuccessful();
+            if (rejected) {
+                if (owner) connection.rollback();
+                else connection.rollback(savepoint);
+                restoreCurrentAccount(cachedBefore);
+            } else if (owner) connection.commit();
+            if (!owner) connection.releaseSavepoint(savepoint);
+            return result;
+        } catch (SQLException | RuntimeException | Error e) {
+            try {
+                if (owner) connection.rollback();
+                else connection.rollback(savepoint);
+            } catch (SQLException rollbackFailure) {
+                e.addSuppressed(rollbackFailure);
+            }
+            restoreCurrentAccount(cachedBefore);
+            throw e;
+        } finally {
+            if (owner) connection.setAutoCommit(true);
+        }
+    }
+
+    // Legacy registration and role helpers update this cache. Restore it on rollback so a
+    // rejected transaction cannot leave cached assignments that were never committed.
+    private void restoreCurrentAccount(User snapshot) {
+        currentUsername = snapshot.getUserName();
+        currentPassword = snapshot.getPassword();
+        currentFirstName = snapshot.getFirstName();
+        currentMiddleName = snapshot.getMiddleName();
+        currentLastName = snapshot.getLastName();
+        currentPreferredFirstName = snapshot.getPreferredFirstName();
+        currentEmailAddress = snapshot.getEmailAddress();
+        currentAdminRole = snapshot.getAdminRole();
+        currentNewRole1 = snapshot.getNewRole1();
+        currentNewRole2 = snapshot.getNewRole2();
+        currentCuratorRole = snapshot.getCuratorRole();
+    }
+
+    /**********
+     * Load non-secret account details without changing the Foundations current-user cache.
+     * Accounts awaiting password replacement are not authorized to enter a role.
+     * Tested by TP3FoundationsTest.roleLookupDoesNotChangeCurrentAccount and dispatch cases.
+     * @param username specifies the authenticated actor's account identifier
+     * @return the current account, or null when missing or awaiting password replacement
+     * @throws SQLException when the account cannot be read
+     */
+    public User findUserForRoleAccess(String username) throws SQLException {
+        if (username == null || username.isBlank()) return null;
+        if (connection == null || connection.isClosed())
+            throw new SQLException("Account access requires an open database connection.");
+        try (PreparedStatement query = connection.prepareStatement(
+                "SELECT * FROM userDB WHERE userName = ? AND passwordResetRequired = FALSE"
+                + (connection.getAutoCommit() ? "" : " FOR UPDATE"))) {
+            query.setString(1, username);
+            try (ResultSet rs = query.executeQuery()) {
+                if (!rs.next()) return null;
+                return new User(rs.getString("userName"), "", rs.getString("firstName"),
+                        rs.getString("middleName"), rs.getString("lastName"),
+                        rs.getString("preferredFirstName"), rs.getString("emailAddress"),
+                        rs.getBoolean("adminRole"), rs.getBoolean("newRole1"),
+                        rs.getBoolean("newRole2"), rs.getBoolean("curatorRole"));
+            }
+        }
+    }
+
+    /**********
+     * Lock the parent before a protected read-check-write operation. Contributor saves and
+     * future Curator lock changes must use this same convention inside inTransaction.
+     * Tested by TP3FoundationsTest.parentLockSerializesProtectedChanges.
+     * @param id specifies the parent lesson
+     * @return whether the lesson exists
+     * @throws SQLException when no transaction is active or the row cannot be locked
+     */
+    public boolean lockLesson(long id) throws SQLException {
+        if (connection.getAutoCommit()) throw new SQLException("A lesson transaction is required.");
+        try (PreparedStatement query = connection.prepareStatement(
+                "SELECT id FROM lessons WHERE id = ? FOR UPDATE")) {
+            query.setLong(1, id);
+            try (ResultSet rows = query.executeQuery()) { return rows.next(); }
+        }
+    }
+
+    /**********
+     * Apply an administrator's role change with current authorization, self-protection, and
+     * last-role checks. The package-only three-argument helper is for trusted regression fixtures.
+     * Tested by TP3FoundationsTest.administratorRoleChangesAreAuthorized.
+     * @param username specifies the account being changed
+     * @param role specifies a stored or displayed role
+     * @param value specifies true to assign or false to remove
+     * @param administrator specifies the authenticated administrator
+     * @return whether the complete authorized change succeeded
+     */
+    public boolean updateUserRole(String username, String role, String value,
+            String administrator) {
+        if (username == null || administrator == null || !RoleNames.isSupported(role)
+                || !("true".equals(value) || "false".equals(value))) return false;
+        try {
+            return inTransaction(() -> {
+                // A stable order avoids two administrators locking each other's rows in reverse.
+                try (PreparedStatement lock = connection.prepareStatement(
+                        "SELECT userName FROM userDB WHERE userName IN (?, ?) "
+                        + "ORDER BY userName FOR UPDATE")) {
+                    lock.setString(1, administrator);
+                    lock.setString(2, username);
+                    try (ResultSet rows = lock.executeQuery()) { while (rows.next()) { } }
+                }
+                User actor = findUserForRoleAccess(administrator);
+                if (actor == null || !actor.getAdminRole()) return false;
+                if (administrator.equals(username) && RoleNames.ADMIN.equals(role)
+                        && "false".equals(value)) return false;
+                return updateUserRole(username, role, value);
+            });
+        } catch (SQLException e) { return false; }
+    }
+
+    /**********
+     * Create a role invitation only for a currently authorized administrator.
+     * Tested by TP3FoundationsTest.invitationsAcceptNewAndLegacyRoles.
+     * @param emailAddress specifies the invited address
+     * @param role specifies one supported role
+     * @param administrator specifies the authenticated administrator
+     * @return the saved code, or null when the request is rejected
+     */
+    public String generateInvitationCode(String emailAddress, String role, String administrator) {
+        try {
+            return inTransaction(() -> {
+                User actor = findUserForRoleAccess(administrator);
+                if (actor == null || !actor.getAdminRole()) return null;
+                return generateInvitationCode(emailAddress, role);
+            });
+        } catch (SQLException e) { return null; }
+    }
+
+    /** @return the cached Curator assignment; tested by TP3FoundationsTest.roleLookupDoesNotChangeCurrentAccount */
+    public boolean getCurrentCuratorRole() { return currentCuratorRole; }
 
 	/*******
 	 * <p> Method: long createLesson(LessonsLearned lesson) </p>
@@ -1432,9 +1623,7 @@ public class Database {
 	 * @throws SQLException when the record cannot be inserted
 	 */
 	public long createExperience(ExperienceRecord experience) throws SQLException {
-		boolean originalAutoCommit = connection.getAutoCommit();
-		connection.setAutoCommit(false);
-		try {
+        return inTransaction(() -> {
 			String query = "INSERT INTO experienceRecords (lessonId, recordOwner, whatWasDone, " +
 					"howItWasDone, elapsedMinutes, experienceLocked, whatLocked, howLocked, " +
 					"elapsedLocked, effortLocked) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -1460,14 +1649,8 @@ public class Database {
 				}
 			}
 			insertEfforts(id, experience.getTeamEfforts());
-			connection.commit();
 			return id;
-		} catch (SQLException e) {
-			connection.rollback();
-			throw e;
-		} finally {
-			connection.setAutoCommit(originalAutoCommit);
-		}
+        });
 	}
 
 	/*******
@@ -1521,9 +1704,7 @@ public class Database {
 	 * @throws SQLException when the update cannot be completed
 	 */
 	public boolean updateExperience(ExperienceRecord experience) throws SQLException {
-		boolean originalAutoCommit = connection.getAutoCommit();
-		connection.setAutoCommit(false);
-		try {
+        return inTransaction(() -> {
 			String query = "UPDATE experienceRecords SET whatWasDone = ?, howItWasDone = ?, " +
 					"elapsedMinutes = ? WHERE id = ? AND lessonId = ? AND recordOwner = ?";
 			int changed;
@@ -1537,7 +1718,6 @@ public class Database {
 				changed = pstmt.executeUpdate();
 			}
 			if (changed != 1) {
-				connection.rollback();
 				return false;
 			}
 			try (PreparedStatement pstmt = connection.prepareStatement(
@@ -1546,14 +1726,8 @@ public class Database {
 				pstmt.executeUpdate();
 			}
 			insertEfforts(experience.getId(), experience.getTeamEfforts());
-			connection.commit();
 			return true;
-		} catch (SQLException e) {
-			connection.rollback();
-			throw e;
-		} finally {
-			connection.setAutoCommit(originalAutoCommit);
-		}
+        });
 	}
 
 	/*******

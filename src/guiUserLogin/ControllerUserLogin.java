@@ -68,7 +68,7 @@ public class ControllerUserLogin {
 		theStage = ts;
 		String username = ViewUserLogin.text_Username.getText();
 		String password = ViewUserLogin.text_Password.getText();
-    	boolean loginResult = false;
+
 
 		// All text fields are checked for excessive length before any other validation
 		if ((username != null && username.length() > 16) ||
@@ -119,40 +119,19 @@ public class ControllerUserLogin {
     			theDatabase.getCurrentMiddleName(), theDatabase.getCurrentLastName(), 
     			theDatabase.getCurrentPreferredFirstName(), theDatabase.getCurrentEmailAddress(), 
     			theDatabase.getCurrentAdminRole(), 
-    			theDatabase.getCurrentNewRole1(), theDatabase.getCurrentNewRole2());
+            theDatabase.getCurrentNewRole1(), theDatabase.getCurrentNewRole2(),
+                theDatabase.getCurrentCuratorRole());
     	
-    	// See which home page dispatch to use
-		int numberOfRoles = theDatabase.getNumberOfRoles(user);		
-		// System.out.println("*** The number of roles: "+ numberOfRoles);
-		if (numberOfRoles == 1) {
-			// Single Account Home Page - The user has no choice here
-			
-			// Admin role
-			if (user.getAdminRole()) {
-				loginResult = theDatabase.loginAdmin(user);
-				if (loginResult) {
-					guiAdminHome.ViewAdminHome.displayAdminHome(theStage, user);
-				}
-			} else if (user.getNewRole1()) {
-				loginResult = theDatabase.loginRole1(user);
-				if (loginResult) {
-					guiRole1.ViewRole1Home.displayRole1Home(theStage, user);
-				}
-			} else if (user.getNewRole2()) {
-				loginResult = theDatabase.loginRole2(user);
-				if (loginResult) {
-					guiRole2.ViewRole2Home.displayRole2Home(theStage, user);
-				}
-				// Other roles
-			} else {
-				System.out.println("***** UserLogin goToUserHome request has an invalid role");
-			}
-		} else if (numberOfRoles > 1) {
-			// Multiple Account Home Page - The user chooses which role to play
-			// System.out.println("*** Going to displayMultipleRoleDispatch");
-			guiMultipleRoleDispatch.ViewMultipleRoleDispatch.
-				displayMultipleRoleDispatch(theStage, user);
-		}
+        int numberOfRoles = theDatabase.getNumberOfRoles(user);
+        if (numberOfRoles == 1) {
+            guiTools.GUISingleRoleDispatch.doSingleRoleDispatch(theStage, user);
+        } else if (numberOfRoles > 1) {
+            guiMultipleRoleDispatch.ViewMultipleRoleDispatch.displayMultipleRoleDispatch(theStage, user);
+        } else {
+            ViewUserLogin.alertUsernamePasswordError.setContentText(
+                    "No role is assigned. Contact an administrator.");
+            ViewUserLogin.alertUsernamePasswordError.showAndWait();
+        }
 	}
 
 	// Use one message for every unsuccessful login so account details are not disclosed

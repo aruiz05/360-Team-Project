@@ -70,18 +70,64 @@ public class GUISingleRoleDispatch {
 	 * 
 	 */
 	public static void doSingleRoleDispatch(Stage ps, User user) {
-		System.out.println("************** Just entered single role dispatch page");
+        lessonManagement.OperationResult<String> role = new roleManagement.RoleAccessService(
+                applicationMain.FoundationsMain.database).singleRole(user == null ? null : user.getUserName());
+        if (!role.isSuccessful()) {
+            showAccessError(ps, role.getMessage());
+            return;
+        }
+        dispatchRole(ps, user, role.getValue());
+    }
 
-		if (user.getAdminRole()) {
-			guiAdminHome.ViewAdminHome.displayAdminHome(ps, user);
-		} else if (user.getNewRole1()) {
-			guiRole1.ViewRole1Home.displayRole1Home(ps, user);
-		} else if (user.getNewRole2()) {
-			guiRole2.ViewRole2Home.displayRole2Home(ps, user);
-		} else {
-			// Invalid role
-			System.out.println("*** ERROR *** GUISingleRoleDispatch was asked to dispatch to " +
-			"a role that is not supported!");
-		}
-	}
+    /**********
+     * Dispatch only after checking the selected role against current persistent assignments.
+     * Tested by TP3RoleNavigationTestingAutomation and TP3FoundationsTest dispatch cases.
+     * @param stage specifies the application stage
+     * @param user specifies the authenticated account snapshot
+     * @param role specifies the selected stored or displayed role
+     */
+    public static void dispatchRole(Stage stage, User user, String role) {
+        User current = requireRoleForView(stage, user, role);
+        if (current == null) return;
+        switch (RoleNames.toDisplayRole(role)) {
+        case RoleNames.ADMIN -> guiAdminHome.ViewAdminHome.displayAdminHome(stage, current);
+        case RoleNames.CONTRIBUTOR -> guiRole1.ViewRole1Home.displayRole1Home(stage, current);
+        case RoleNames.VIEWER -> guiViewer.ViewViewerHome.displayViewerHome(stage, current);
+        case RoleNames.CURATOR -> guiCurator.ViewCuratorHome.displayCuratorHome(stage, current);
+        default -> showAccessError(stage, "Select a supported role.");
+        }
+    }
+
+    /**********
+     * Recheck direct view entry as well as normal login dispatch. Role decisions remain in the
+     * non-GUI RoleAccessService and are also used by business operations.
+     * Tested by TP3RoleNavigationTestingAutomation and TP3FoundationsTest.
+     * @param stage specifies the application stage
+     * @param user specifies the authenticated actor
+     * @param role specifies the required role
+     * @return the refreshed account, or null when access is rejected
+     */
+    public static User requireRoleForView(Stage stage, User user, String role) {
+        lessonManagement.OperationResult<User> access = new roleManagement.RoleAccessService(
+                applicationMain.FoundationsMain.database).requireRole(
+                        user == null ? null : user.getUserName(), role);
+        if (!access.isSuccessful()) {
+            showAccessError(stage, access.getMessage());
+            return null;
+        }
+        User current = access.getValue();
+        // Retain the authenticated user's profile workflow without exposing passwords in role queries.
+        current.setPassword(user.getPassword());
+        return current;
+    }
+
+    private static void showAccessError(Stage stage, String message) {
+        javafx.scene.control.Alert error = new javafx.scene.control.Alert(
+                javafx.scene.control.Alert.AlertType.ERROR);
+        error.setTitle("Role Access");
+        error.setHeaderText(null);
+        error.setContentText(message);
+        error.showAndWait();
+        guiUserLogin.ViewUserLogin.displayUserLogin(stage);
+    }
 }

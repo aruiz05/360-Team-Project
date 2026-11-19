@@ -275,25 +275,8 @@ public class ViewListUsers {
      */
     private static String getRoles(User user) {
 
-        List<String> roles = new ArrayList<String>();
-
-        if (user.getAdminRole()) {
-            roles.add("Admin");
-        }
-
-        if (user.getNewRole1()) {
-			roles.add(guiTools.RoleNames.CONTRIBUTOR);
-        }
-
-        if (user.getNewRole2()) {
-            roles.add("Role2");
-        }
-
-        if (roles.isEmpty()) {
-            return "None";
-        }
-
-        return String.join(", ", roles);
+        List<String> roles = guiTools.RoleNames.assignedRoles(user);
+        return roles.isEmpty() ? "None" : String.join(", ", roles);
     }
 
     /*******

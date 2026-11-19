@@ -4,6 +4,8 @@ import java.sql.SQLException;
 import java.util.List;
 
 import database.Database;
+import guiTools.RoleNames;
+import roleManagement.RoleAccessService;
 import entityClasses.ExperienceRecord;
 import entityClasses.LessonsLearned;
 import entityClasses.LessonsLearnedList;
@@ -20,8 +22,13 @@ import lessonManagement.ExperienceValidator.ValidatedExperience;
  *
  * @author CSE 360 Team Project
  *
+ * <p>Current role and transaction boundaries are validated by TP3FoundationsTest; inherited
+ * CRUD, ownership, and lock decisions are validated by HW2TestingAutomation and
+ * TP2BoundaryCoverageTestingAutomation.</p>
+ *
  * @version 1.00        2026-10-01 Initial HW2 version
  * @version 2.00        2026-11-10 Uses the HW3 experience lock policy prototype
+ * @version 3.00        2026-11-18 Current-role and transaction boundaries
  */
 public class LessonService {
 
@@ -44,6 +51,13 @@ public class LessonService {
 	 * @return the created lesson or a helpful error
 	 */
 	public OperationResult<LessonsLearned> createLesson(String owner, LessonDraft draft) {
+        return authorized(owner, "The lesson could not be saved. Try again.", () -> {
+            return createLessonAuthorized(owner, draft);
+        });
+    }
+
+    // Caller has verified current role and established a transaction before this trusted work.
+    private OperationResult<LessonsLearned> createLessonAuthorized(String owner, LessonDraft draft) {
 		OperationResult<LessonsLearnedList> list =
 				LessonsLearnedList.readForContributor(database, owner);
 		if (!list.isSuccessful()) return OperationResult.failure(list.getMessage());
@@ -58,6 +72,13 @@ public class LessonService {
 	 * @return the contributor-visible lesson or a helpful error
 	 */
 	public OperationResult<LessonsLearned> readLesson(String idInput, String contributor) {
+        return authorized(contributor, "The lesson could not be loaded. Try again.", () -> {
+            return readLessonAuthorized(idInput, contributor);
+        });
+    }
+
+    // Caller has verified current role and established a transaction before this trusted work.
+    private OperationResult<LessonsLearned> readLessonAuthorized(String idInput, String contributor) {
 		OperationResult<Long> parsed = parseLessonId(idInput);
 		if (!parsed.isSuccessful()) return OperationResult.failure(parsed.getMessage());
 		OperationResult<LessonsLearnedList> list =
@@ -73,6 +94,13 @@ public class LessonService {
 	 * @return only that contributor's lessons
 	 */
 	public OperationResult<LessonsLearnedList> listLessons(String contributor) {
+        return authorized(contributor, "The lesson list could not be loaded. Try again.", () -> {
+            return listLessonsAuthorized(contributor);
+        });
+    }
+
+    // Caller has verified current role and established a transaction before this trusted work.
+    private OperationResult<LessonsLearnedList> listLessonsAuthorized(String contributor) {
 		return LessonsLearnedList.readForContributor(database, contributor);
 	}
 
@@ -84,6 +112,13 @@ public class LessonService {
 	 * @return the matching contributor-only subset
 	 */
 	public OperationResult<LessonsLearnedList> filterLessons(String contributor, String titleText) {
+        return authorized(contributor, "The lesson list could not be loaded. Try again.", () -> {
+            return filterLessonsAuthorized(contributor, titleText);
+        });
+    }
+
+    // Caller has verified current role and established a transaction before this trusted work.
+    private OperationResult<LessonsLearnedList> filterLessonsAuthorized(String contributor, String titleText) {
 		OperationResult<LessonsLearnedList> full = listLessons(contributor);
 		if (!full.isSuccessful()) return full;
 		LessonsLearnedList subset = full.getValue().filterByKeywords(titleText);
@@ -100,7 +135,17 @@ public class LessonService {
 	 * @param draft specifies the proposed replacement values
 	 * @return the updated lesson or a helpful error
 	 */
-	public OperationResult<LessonsLearned> updateLesson(String idInput, String contributor,
+	public OperationResult<LessonsLearned> updateLesson(String idInput, String contributor, LessonDraft draft) {
+        return authorized(contributor, "The lesson could not be updated. Try again.", () -> {
+            OperationResult<Long> parsed = parseLessonId(idInput);
+            if (!parsed.isSuccessful()) return OperationResult.failure(parsed.getMessage());
+            database.lockLesson(parsed.getValue());
+            return updateLessonAuthorized(idInput, contributor, draft);
+        });
+    }
+
+    // Caller has verified current role and established a transaction before this trusted work.
+    private OperationResult<LessonsLearned> updateLessonAuthorized(String idInput, String contributor,
 			LessonDraft draft) {
 		OperationResult<Long> parsed = parseLessonId(idInput);
 		if (!parsed.isSuccessful()) return OperationResult.failure(parsed.getMessage());
@@ -118,6 +163,16 @@ public class LessonService {
 	 * @return a successful result or a helpful error
 	 */
 	public OperationResult<Boolean> deleteLesson(String idInput, String contributor) {
+        return authorized(contributor, "The lesson could not be deleted. Try again.", () -> {
+            OperationResult<Long> parsed = parseLessonId(idInput);
+            if (!parsed.isSuccessful()) return OperationResult.failure(parsed.getMessage());
+            database.lockLesson(parsed.getValue());
+            return deleteLessonAuthorized(idInput, contributor);
+        });
+    }
+
+    // Caller has verified current role and established a transaction before this trusted work.
+    private OperationResult<Boolean> deleteLessonAuthorized(String idInput, String contributor) {
 		OperationResult<Long> parsed = parseLessonId(idInput);
 		if (!parsed.isSuccessful()) return OperationResult.failure(parsed.getMessage());
 		OperationResult<LessonsLearnedList> list =
@@ -135,7 +190,17 @@ public class LessonService {
 	 * @param draft specifies raw experience information
 	 * @return the created experience or a helpful error
 	 */
-	public OperationResult<ExperienceRecord> createExperience(String lessonIdInput,
+	public OperationResult<ExperienceRecord> createExperience(String lessonIdInput, String contributor, ExperienceDraft draft) {
+        return authorized(contributor, "The experience could not be saved. Try again.", () -> {
+            OperationResult<Long> parsed = parseLessonId(lessonIdInput);
+            if (!parsed.isSuccessful()) return OperationResult.failure(parsed.getMessage());
+            database.lockLesson(parsed.getValue());
+            return createExperienceAuthorized(lessonIdInput, contributor, draft);
+        });
+    }
+
+    // Caller has verified current role and established a transaction before this trusted work.
+    private OperationResult<ExperienceRecord> createExperienceAuthorized(String lessonIdInput,
 			String contributor, ExperienceDraft draft) {
 		OperationResult<Long> parsed = parseLessonId(lessonIdInput);
 		if (!parsed.isSuccessful()) return OperationResult.failure(parsed.getMessage());
@@ -169,6 +234,13 @@ public class LessonService {
 	 * @return the experience or a helpful error
 	 */
 	public OperationResult<ExperienceRecord> readExperience(String idInput, String contributor) {
+        return authorized(contributor, "The experience could not be loaded. Try again.", () -> {
+            return readExperienceAuthorized(idInput, contributor);
+        });
+    }
+
+    // Caller has verified current role and established a transaction before this trusted work.
+    private OperationResult<ExperienceRecord> readExperienceAuthorized(String idInput, String contributor) {
 		OperationResult<Long> parsed = parseExperienceId(idInput);
 		if (!parsed.isSuccessful()) return OperationResult.failure(parsed.getMessage());
 		try {
@@ -194,7 +266,14 @@ public class LessonService {
 	 * @param contributor specifies the signed-in contributor
 	 * @return all contributor-visible experience records for the lesson
 	 */
-	public OperationResult<List<ExperienceRecord>> listExperiences(String lessonIdInput,
+	public OperationResult<List<ExperienceRecord>> listExperiences(String lessonIdInput, String contributor) {
+        return authorized(contributor, "Experience records could not be loaded. Try again.", () -> {
+            return listExperiencesAuthorized(lessonIdInput, contributor);
+        });
+    }
+
+    // Caller has verified current role and established a transaction before this trusted work.
+    private OperationResult<List<ExperienceRecord>> listExperiencesAuthorized(String lessonIdInput,
 			String contributor) {
 		OperationResult<Long> parsed = parseLessonId(lessonIdInput);
 		if (!parsed.isSuccessful()) return OperationResult.failure(parsed.getMessage());
@@ -222,7 +301,18 @@ public class LessonService {
 	 * @param draft specifies proposed replacement values
 	 * @return the updated experience or a helpful error
 	 */
-	public OperationResult<ExperienceRecord> updateExperience(String idInput,
+	public OperationResult<ExperienceRecord> updateExperience(String idInput, String contributor, ExperienceDraft draft) {
+        return authorized(contributor, "The experience could not be updated. Try again.", () -> {
+            OperationResult<Long> parsed = parseExperienceId(idInput);
+            if (!parsed.isSuccessful()) return OperationResult.failure(parsed.getMessage());
+            ExperienceRecord current = database.getExperience(parsed.getValue());
+            if (current != null) database.lockLesson(current.getLessonId());
+            return updateExperienceAuthorized(idInput, contributor, draft);
+        });
+    }
+
+    // Caller has verified current role and established a transaction before this trusted work.
+    private OperationResult<ExperienceRecord> updateExperienceAuthorized(String idInput,
 			String contributor, ExperienceDraft draft) {
 		OperationResult<Long> parsed = parseExperienceId(idInput);
 		if (!parsed.isSuccessful()) return OperationResult.failure(parsed.getMessage());
@@ -274,6 +364,17 @@ public class LessonService {
 	 * @return a successful result or a helpful error
 	 */
 	public OperationResult<Boolean> deleteExperience(String idInput, String contributor) {
+        return authorized(contributor, "The experience could not be deleted. Try again.", () -> {
+            OperationResult<Long> parsed = parseExperienceId(idInput);
+            if (!parsed.isSuccessful()) return OperationResult.failure(parsed.getMessage());
+            ExperienceRecord current = database.getExperience(parsed.getValue());
+            if (current != null) database.lockLesson(current.getLessonId());
+            return deleteExperienceAuthorized(idInput, contributor);
+        });
+    }
+
+    // Caller has verified current role and established a transaction before this trusted work.
+    private OperationResult<Boolean> deleteExperienceAuthorized(String idInput, String contributor) {
 		OperationResult<Long> parsed = parseExperienceId(idInput);
 		if (!parsed.isSuccessful()) return OperationResult.failure(parsed.getMessage());
 		try {
@@ -299,6 +400,25 @@ public class LessonService {
 			return OperationResult.failure("The experience could not be deleted. Try again.");
 		}
 	}
+
+    /**********
+     * Keep current authorization and the entire protected operation in the same transaction.
+     * The database locks the actor during a transactional lookup, so a concurrent role removal
+     * cannot become effective halfway through the write. Tested by TP3FoundationsTest.
+     */
+    private <T> OperationResult<T> authorized(String contributor, String failureMessage,
+            Database.TransactionWork<OperationResult<T>> work) {
+        try {
+            return database.inTransaction(() -> {
+                OperationResult<entityClasses.User> access =
+                        new RoleAccessService(database).requireRole(contributor, RoleNames.CONTRIBUTOR);
+                if (!access.isSuccessful()) return OperationResult.failure(access.getMessage());
+                return work.execute();
+            });
+        } catch (SQLException e) {
+            return OperationResult.failure(failureMessage);
+        }
+    }
 
 	private OperationResult<Long> parseLessonId(String input) {
 		if (blank(input)) return OperationResult.failure("Select a lesson.");

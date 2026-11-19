@@ -146,6 +146,9 @@ public class TP2BoundaryCoverageTestingAutomation {
 		try (TestContext context = context("sql_input")) {
 			LessonsLearned normal = createLesson(context, OWNER_A, "Normal lesson");
 			String hostileOwner = "owner' OR '1'='1";
+            // Parameter-safety fixture still needs a persisted Contributor assignment in TP3.
+            context.database.register(new entityClasses.User(hostileOwner, "Test1!", "", "", "", "", "",
+                    false, true, false));
 			LessonDraft hostile = new LessonDraft("'); DROP TABLE lessons; --",
 					"Problem ' OR '1'='1", "Lesson; DELETE FROM lessons; --");
 			LessonsLearned created = success(context.service.createLesson(hostileOwner, hostile));
@@ -205,7 +208,9 @@ public class TP2BoundaryCoverageTestingAutomation {
 			check(success(context.service.listLessons(OWNER_B)).size() == 2,
 					"Owner B receives both own lessons", "2", String.valueOf(
 						success(context.service.listLessons(OWNER_B)).size()));
-			check(success(context.service.listLessons("ContributorC")).isEmpty(),
+			context.database.register(new entityClasses.User("ContributorC", "Test1!", "", "", "", "", "",
+                    false, true, false));
+            check(success(context.service.listLessons("ContributorC")).isEmpty(),
 					"Owner with zero rows receives an empty list", "Empty", "Empty");
 
 			assertFailure(context.service.readLesson(id(aLesson), OWNER_B),
@@ -868,7 +873,8 @@ public class TP2BoundaryCoverageTestingAutomation {
 			if (database != null) database.closeConnection();
 			database = new Database(url);
 			database.connectToDatabase();
-			service = new LessonService(database);
+			ContributorTestAccounts.register(database);
+            service = new LessonService(database);
 		}
 
 		@Override

@@ -41,7 +41,8 @@ public class HW2PersistenceProcess {
 		String phase = args[0];
 		Database database = new Database("jdbc:h2:file:" + args[1]);
 		database.connectToDatabase();
-		LessonService service = new LessonService(database);
+		ContributorTestAccounts.register(database);
+        LessonService service = new LessonService(database);
 		Path statePath = Path.of(args[2]);
 		Properties state = Files.exists(statePath) ? load(statePath) : new Properties();
 		try {

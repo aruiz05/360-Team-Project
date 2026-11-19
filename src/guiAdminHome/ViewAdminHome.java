@@ -88,7 +88,7 @@ public class ViewAdminHome {
 	protected static TextField text_InvitationEmailAddress = new TextField();
 	protected static ComboBox <String> combobox_SelectRole = new ComboBox <String>();
 	protected static String [] roles = {guiTools.RoleNames.ADMIN,
-			guiTools.RoleNames.CONTRIBUTOR, guiTools.RoleNames.ROLE_2};
+			guiTools.RoleNames.CONTRIBUTOR, guiTools.RoleNames.VIEWER, guiTools.RoleNames.CURATOR};
 	protected static Button button_SendInvitation = new Button("Send Invitation");
 	protected static Alert alertEmailError = new Alert(AlertType.INFORMATION);
 	protected static Alert alertEmailSent = new Alert(AlertType.INFORMATION);
@@ -163,7 +163,8 @@ public class ViewAdminHome {
 		
 		// Establish the references to the GUI and the current user
 		theStage = ps;
-		theUser = user;
+		theUser = guiTools.GUISingleRoleDispatch.requireRoleForView(ps, user, guiTools.RoleNames.ADMIN);
+        if (theUser == null) return;
 		
 		// If not yet established, populate the static aspects of the GUI
 		if (theView == null) theView = new ViewAdminHome();		// Instantiate singleton if needed
