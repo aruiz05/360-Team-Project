@@ -1,5 +1,8 @@
 # TP3 Viewer discovery and Curator core operations
 
+This document records the second increment. Persistent statistics and visibility are now
+implemented in the next increment; see [TP3_STATISTICS.md](TP3_STATISTICS.md).
+
 This increment continues on `tp3` from foundation commit
 `a0f2b9f21c683e01c34c9abd161ee6d5c7e95c4a`. The original `hw3` baseline remains
 `bec1de6bdafad9a8962586ec02205203e96c1920`. Neither `hw3` nor `main` is changed.

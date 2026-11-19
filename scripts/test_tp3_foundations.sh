@@ -44,10 +44,10 @@ for test in "${regressions[@]}"; do
     echo "PASS $test"
 done
 "$TP3_JDK/bin/java" -Dtp3.test.classpath="$classpath" -jar "$TP3_JUNIT_JAR" execute \
-    --class-path "$classpath" --select-class database.TP3FoundationsTest --select-class database.TP3DiscoveryTest --details tree \
+    --class-path "$classpath" --select-class database.TP3FoundationsTest --select-class database.TP3DiscoveryTest --select-class database.TP3StatisticsTest --details tree \
     --disable-ansi-colors --fail-if-no-tests --reports-dir "$output_root/junit" \
     > "$output_root/logs/junit.log" 2>&1
-echo "PASS database.TP3FoundationsTest and database.TP3DiscoveryTest"
+echo "PASS database.TP3FoundationsTest, database.TP3DiscoveryTest and database.TP3StatisticsTest"
 gui_options=()
 gui_classpath="$classpath:$TP3_JAVAFX_LIB/*"
 if [[ -n "${TP3_MONOCLE_JAR:-}" ]]; then
@@ -63,4 +63,9 @@ mkdir -p "$output_root/discovery-gui-home"
     -Duser.home="$output_root/discovery-gui-home" -Dtp3.isolated.gui.test=true "${gui_options[@]}" \
     -cp "$gui_classpath" guiTools.TP3DiscoveryGuiTestingAutomation > "$output_root/logs/discovery-gui.log" 2>&1
 echo "PASS guiTools.TP3DiscoveryGuiTestingAutomation"
-echo "All foundation, discovery, and regression suites passed. Logs: $output_root"
+mkdir -p "$output_root/statistics-gui-home"
+"$TP3_JDK/bin/java" --enable-native-access=ALL-UNNAMED \
+    -Duser.home="$output_root/statistics-gui-home" -Dtp3.isolated.gui.test=true "${gui_options[@]}" \
+    -cp "$gui_classpath" guiTools.TP3StatisticsGuiTestingAutomation > "$output_root/logs/statistics-gui.log" 2>&1
+echo "PASS guiTools.TP3StatisticsGuiTestingAutomation"
+echo "All foundation, discovery, statistics, and regression suites passed. Logs: $output_root"

@@ -14,8 +14,10 @@ for name in 'New Code Javadoc' 'Test Code Javadoc'; do
 done
 mkdir -p "$output_root"
 production_sources=()
-for relative in database/Database.java entityClasses/User.java entityClasses/SearchTerm.java entityClasses/ViewerLesson.java guiTools/RoleNames.java \
-    guiTools/GUISingleRoleDispatch.java lessonManagement/LessonService.java lessonManagement/DiscoveryAccess.java \
+for relative in database/Database.java entityClasses/User.java entityClasses/SearchTerm.java entityClasses/StatisticsValues.java entityClasses/StatisticsRequest.java \
+    entityClasses/StatisticsPreview.java entityClasses/StatisticsSummary.java entityClasses/StatisticsSourceSnapshot.java entityClasses/SharedStatistics.java entityClasses/ViewerLesson.java guiTools/RoleNames.java \
+    guiTools/GUISingleRoleDispatch.java lessonManagement/LessonService.java lessonManagement/DiscoveryAccess.java lessonManagement/StatisticsCalculator.java lessonManagement/StatisticsService.java \
+    guiContributorLessonDetails/ViewContributorLessonDetails.java \
     lessonManagement/ViewerLessonService.java lessonManagement/CuratorLessonService.java lessonManagement/LessonLockState.java \
     guiAddRemoveRoles/ControllerAddRemoveRoles.java guiAddRemoveRoles/ViewAddRemoveRoles.java \
     guiAdminHome/ControllerAdminHome.java guiAdminHome/ViewAdminHome.java \
@@ -24,7 +26,7 @@ for relative in database/Database.java entityClasses/User.java entityClasses/Sea
     guiRole1/ViewRole1Home.java guiUserLogin/ControllerUserLogin.java \
     guiUserUpdate/ControllerUserUpdate.java; do production_sources+=("$project_root/src/$relative"); done
 while IFS= read -r source; do production_sources+=("$source"); done \
-    < <(find "$project_root/src/guiViewer" "$project_root/src/guiCurator" "$project_root/src/roleManagement" "$project_root/src/guiViewerLessons" "$project_root/src/guiCuratorLessons" -name '*.java' -print | sort)
+    < <(find "$project_root/src/guiViewer" "$project_root/src/guiCurator" "$project_root/src/roleManagement" "$project_root/src/guiViewerLessons" "$project_root/src/guiCuratorLessons" "$project_root/src/guiCuratorStatistics" "$project_root/src/guiContributorStatistics" -name '*.java' -print | sort)
 "$TP3_JDK/bin/javadoc" -quiet -private -Xdoclint:all,-missing \
     --module-path "$TP3_JAVAFX_LIB" --add-modules javafx.controls,javafx.fxml \
     -classpath "$TP3_H2_JAR" -sourcepath "$project_root/src" \

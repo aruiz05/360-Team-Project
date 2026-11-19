@@ -201,6 +201,21 @@ public class Database {
 				+ "PRIMARY KEY (experienceId, entryOrder), "
 				+ "FOREIGN KEY (experienceId) REFERENCES experienceRecords(id) ON DELETE CASCADE)";
 		statement.execute(effortTable);
+        // Historical source IDs have no live foreign key: provenance survives source deletion.
+        statement.execute("CREATE TABLE IF NOT EXISTS statisticsSummaries ("
+                + "id BIGINT AUTO_INCREMENT PRIMARY KEY, destinationLessonId BIGINT NOT NULL, "
+                + "createdAt TIMESTAMP WITH TIME ZONE NOT NULL, visibleToContributor BOOL DEFAULT FALSE NOT NULL, "
+                + "attemptCount INT NOT NULL, meanElapsedMinutes DOUBLE NOT NULL, medianElapsedMinutes DOUBLE NOT NULL, "
+                + "minElapsedMinutes DOUBLE NOT NULL, maxElapsedMinutes DOUBLE NOT NULL, meanEffortMinutes DOUBLE NOT NULL, "
+                + "medianEffortMinutes DOUBLE NOT NULL, minEffortMinutes DOUBLE NOT NULL, maxEffortMinutes DOUBLE NOT NULL,"
+                + "FOREIGN KEY (destinationLessonId) REFERENCES lessons(id) ON DELETE CASCADE)");
+        statement.execute("CREATE TABLE IF NOT EXISTS statisticsSourceSnapshots ("
+                + "id BIGINT AUTO_INCREMENT PRIMARY KEY, summaryId BIGINT NOT NULL, "
+                + "originalLessonId BIGINT NOT NULL, originalExperienceId BIGINT NOT NULL, liveExperienceId BIGINT, "
+                + "elapsedMinutes DOUBLE NOT NULL, effortTotalMinutes DOUBLE NOT NULL, sourceFingerprint VARCHAR(64) NOT NULL, "
+                + "UNIQUE (summaryId, originalExperienceId), "
+                + "FOREIGN KEY (summaryId) REFERENCES statisticsSummaries(id) ON DELETE CASCADE, "
+                + "FOREIGN KEY (liveExperienceId) REFERENCES experienceRecords(id) ON DELETE SET NULL)");
         // Additive migration leaves all existing TP1 and TP2 rows intact.
         statement.execute("CREATE TABLE IF NOT EXISTS lessonSearchTerms ("
                 + "lessonId BIGINT NOT NULL, term VARCHAR(500) NOT NULL, "
@@ -1841,6 +1856,152 @@ public class Database {
             query.setBoolean(3, locks.isProblemSituationLocked()); query.setBoolean(4, locks.isLessonLearnedLocked());
             query.setLong(5, lessonId); return query.executeUpdate() == 1;
         }
+    }
+
+    /*******
+     * Insert a complete hidden snapshot inside the caller's authorized parent-locked transaction.
+     * Tested by TP3StatisticsTest.previewAndSave, rollback and persistenceAcrossProcesses.
+     * @param summary validated immutable snapshot; visibility is always initially false
+     * @return generated summary ID
+     * @throws SQLException on missing transaction or incomplete storage
+     */
+    public long insertStatisticsSummary(entityClasses.StatisticsSummary summary) throws SQLException {
+        if (connection == null || connection.getAutoCommit()) throw new SQLException("Summary insertion requires a transaction.");
+        long id;
+        try (PreparedStatement query = connection.prepareStatement(
+                "INSERT INTO statisticsSummaries (destinationLessonId, createdAt, visibleToContributor, attemptCount, "
+                + "meanElapsedMinutes, medianElapsedMinutes, minElapsedMinutes, maxElapsedMinutes, meanEffortMinutes, "
+                + "medianEffortMinutes, minEffortMinutes, maxEffortMinutes)"
+                + "VALUES (?, ?, FALSE, ?, ?, ?, ?, ?, ?, ?, ?, ?)", java.sql.Statement.RETURN_GENERATED_KEYS)) {
+            query.setLong(1, summary.getDestinationLessonId());
+            query.setObject(2, summary.getCreatedAt().atOffset(java.time.ZoneOffset.UTC));
+            query.setInt(3, summary.getValues().getAttemptCount());
+            query.setDouble(4, summary.getValues().getMeanElapsedMinutes());
+            query.setDouble(5, summary.getValues().getMedianElapsedMinutes());
+            query.setDouble(6, summary.getValues().getMinElapsedMinutes());
+            query.setDouble(7, summary.getValues().getMaxElapsedMinutes());
+            query.setDouble(8, summary.getValues().getMeanEffortMinutes());
+            query.setDouble(9, summary.getValues().getMedianEffortMinutes());
+            query.setDouble(10, summary.getValues().getMinEffortMinutes());
+            query.setDouble(11, summary.getValues().getMaxEffortMinutes());
+            if (query.executeUpdate() != 1) throw new SQLException("Summary was not saved.");
+            try (ResultSet keys = query.getGeneratedKeys()) {
+                if (!keys.next()) throw new SQLException("Summary key is unavailable."); id = keys.getLong(1);
+            }
+        }
+        for (var source : summary.getSources()) insertStatisticsSource(id, source);
+        return id;
+    }
+
+    /**
+     * Insert one accepted child snapshot without committing. Protected for storage fault tests.
+     * Tested by TP3StatisticsTest.rollback.
+     * @param summaryId saved parent key
+     * @param source accepted source evidence
+     * @throws SQLException on storage failure
+     */
+    protected void insertStatisticsSource(long summaryId, entityClasses.StatisticsSourceSnapshot source) throws SQLException {
+        try (PreparedStatement query = connection.prepareStatement(
+                "INSERT INTO statisticsSourceSnapshots (summaryId, originalLessonId, originalExperienceId, liveExperienceId, "
+                + "elapsedMinutes, effortTotalMinutes, sourceFingerprint) VALUES (?, ?, ?, ?, ?, ?, ?)")) {
+            query.setLong(1, summaryId); query.setLong(2, source.getOriginalLessonId());
+            query.setLong(3, source.getOriginalExperienceId()); query.setObject(4, source.getLiveExperienceId());
+            query.setDouble(5, source.getElapsedMinutes()); query.setDouble(6, source.getEffortTotalMinutes());
+            query.setString(7, source.getSourceFingerprint());
+            if (query.executeUpdate() != 1) throw new SQLException("Source evidence was not saved.");
+        }
+    }
+
+    /*******
+     * Read historical values and evidence; the service evaluates current source staleness.
+     * Tested by TP3StatisticsTest.sourceChanges and previewAndSave.
+     * @param id summary key
+     * @return saved snapshot or null
+     * @throws SQLException on storage failure
+     */
+    public entityClasses.StatisticsSummary getStatisticsSummary(long id) throws SQLException {
+        try (PreparedStatement query = connection.prepareStatement("SELECT * FROM statisticsSummaries WHERE id=?")) {
+            query.setLong(1, id);
+            try (ResultSet rows = query.executeQuery()) {
+                if (!rows.next()) return null;
+                return new entityClasses.StatisticsSummary(id, rows.getLong("destinationLessonId"),
+                        rows.getObject("createdAt", java.time.OffsetDateTime.class).toInstant(), rows.getBoolean("visibleToContributor"),
+                        statisticsValues(rows), getStatisticsSources(id), false);
+            }
+        }
+    }
+
+    private List<entityClasses.StatisticsSourceSnapshot> getStatisticsSources(long id) throws SQLException {
+        List<entityClasses.StatisticsSourceSnapshot> sources = new ArrayList<>();
+        try (PreparedStatement query = connection.prepareStatement(
+                "SELECT * FROM statisticsSourceSnapshots WHERE summaryId=? ORDER BY originalExperienceId")) {
+            query.setLong(1, id);
+            try (ResultSet rows = query.executeQuery()) {
+                while (rows.next()) sources.add(new entityClasses.StatisticsSourceSnapshot(rows.getLong("id"), id,
+                        rows.getLong("originalLessonId"), rows.getLong("originalExperienceId"),
+                        rows.getObject("liveExperienceId", Long.class), rows.getDouble("elapsedMinutes"),
+                        rows.getDouble("effortTotalMinutes"), rows.getString("sourceFingerprint")));
+            }
+        }
+        return sources;
+    }
+
+    /*******
+     * Read Curator snapshots for one destination. Role checks belong to StatisticsService.
+     * Tested by TP3StatisticsTest.previewAndSave and sourceChanges.
+     * @param lessonId destination key
+     * @return all saved snapshots for this destination in ID order
+     * @throws SQLException on storage failure
+     */
+    public List<entityClasses.StatisticsSummary> getStatisticsSummaries(long lessonId) throws SQLException {
+        List<entityClasses.StatisticsSummary> summaries = new ArrayList<>();
+        try (PreparedStatement query = connection.prepareStatement("SELECT id FROM statisticsSummaries WHERE destinationLessonId=? ORDER BY id")) {
+            query.setLong(1, lessonId);
+            try (ResultSet rows = query.executeQuery()) { while (rows.next()) summaries.add(getStatisticsSummary(rows.getLong(1))); }
+        }
+        return summaries;
+    }
+
+    /*******
+     * Query only shared aggregate columns; source identifiers never enter the returned projection.
+     * Tested by TP3StatisticsTest.visibilityAndPrivacy and persistenceAcrossProcesses.
+     * @param lessonId owned destination; service verifies current Contributor and ownership
+     * @return shared aggregates only
+     * @throws SQLException on storage failure
+     */
+    public List<entityClasses.SharedStatistics> getSharedStatistics(long lessonId) throws SQLException {
+        List<entityClasses.SharedStatistics> summaries = new ArrayList<>();
+        try (PreparedStatement query = connection.prepareStatement(
+                "SELECT id, createdAt, attemptCount, meanElapsedMinutes, medianElapsedMinutes, minElapsedMinutes, "
+                + "maxElapsedMinutes, meanEffortMinutes, medianEffortMinutes, minEffortMinutes, maxEffortMinutes FROM "
+                + "statisticsSummaries WHERE destinationLessonId=? AND visibleToContributor=TRUE ORDER BY id")) {
+            query.setLong(1, lessonId);
+            try (ResultSet rows = query.executeQuery()) {
+                while (rows.next()) summaries.add(new entityClasses.SharedStatistics(rows.getLong("id"), rows.getObject("createdAt", java.time.OffsetDateTime.class).toInstant(), statisticsValues(rows)));
+            }
+        }
+        return summaries;
+    }
+
+    /*******
+     * Change sharing alone within the caller's authorized destination-locked transaction.
+     * Tested by TP3StatisticsTest.visibilityAndPrivacy and rollback.
+     * @param id saved summary key
+     * @param visible reviewed sharing choice
+     * @return true when one summary changed
+     * @throws SQLException on missing transaction or storage failure
+     */
+    public boolean updateSummaryVisibility(long id, boolean visible) throws SQLException {
+        if (connection == null || connection.getAutoCommit()) throw new SQLException("Visibility changes require a transaction.");
+        try (PreparedStatement query = connection.prepareStatement("UPDATE statisticsSummaries SET visibleToContributor=? WHERE id=?")) {
+            query.setBoolean(1, visible); query.setLong(2, id); return query.executeUpdate() == 1;
+        }
+    }
+
+    private entityClasses.StatisticsValues statisticsValues(ResultSet rows) throws SQLException {
+        return new entityClasses.StatisticsValues(rows.getInt("attemptCount"), rows.getDouble("meanElapsedMinutes"), rows.getDouble("medianElapsedMinutes"),
+                rows.getDouble("minElapsedMinutes"), rows.getDouble("maxElapsedMinutes"), rows.getDouble("meanEffortMinutes"), rows.getDouble("medianEffortMinutes"),
+                rows.getDouble("minEffortMinutes"), rows.getDouble("maxEffortMinutes"));
     }
 
 	// The following package-protected helpers seed Phase Three-owned state for HW2 tests.  They are

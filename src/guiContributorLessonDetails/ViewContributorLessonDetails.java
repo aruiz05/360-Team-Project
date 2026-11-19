@@ -35,6 +35,9 @@ import javafx.stage.Stage;
  * or changing experience information, while a field-level experience lock disables deletion but
  * still permits editing any unlocked experience fields.</p>
  *
+ * <p>The Shared Statistics action opens only owned, explicitly shared aggregates through the
+ * separate statistics MVC. Validated by TP3StatisticsGuiTestingAutomation.</p>
+ *
  * @author CSE 360 Team Project
  *
  * @version 1.00        2026-10-01 Initial HW2 version
@@ -202,7 +205,12 @@ public class ViewContributorLessonDetails {
 		buttonDelete.setOnAction((_) -> ControllerContributorLessonDetails.performDelete());
 		buttonBack.setOnAction((_) -> ControllerContributorLessonDetails.performBack());
 
-		root.getChildren().addAll(labelPageTitle, labelIdentity, labelStatus,
+		// Shared aggregate values are returned through a separate ownership-filtered model.
+        Button statistics = new Button("Shared Statistics");
+        setupButton(statistics, 250, 20, 540);
+        statistics.setOnAction(e -> guiContributorStatistics.ViewContributorStatistics.displayStatistics(theStage, theUser, currentLesson));
+        root.getChildren().add(statistics);
+        root.getChildren().addAll(labelPageTitle, labelIdentity, labelStatus,
 				labelTitle, labelProblem, labelLesson, textTitle, textProblem, textLesson,
 				labelTitleLock, labelProblemLock,
 				labelLessonLock, tableExperiences, buttonAdd, buttonEdit, buttonDelete,

@@ -91,6 +91,12 @@ public class ControllerCuratorLessons {
         complete(ModelCuratorLessons.locks(actor(), id(), new LessonLockState(ViewCuratorLessons.wholeLock.isSelected(),
                 ViewCuratorLessons.titleLock.isSelected(), ViewCuratorLessons.problemLock.isSelected(), ViewCuratorLessons.textLock.isSelected())));
     }
+    /** Open statistics for the stable selected destination; tested by TP3StatisticsGuiTestingAutomation. */
+    protected static void statistics() {
+        String selected = id();
+        if (selected.isEmpty()) { ViewCuratorLessons.status.setText("Select a destination lesson first."); return; }
+        guiCuratorStatistics.ViewCuratorStatistics.displayStatistics(ViewCuratorLessons.stage, ViewCuratorLessons.user, Long.parseLong(selected));
+    }
     private static void complete(OperationResult<?> result) {
         if (result.isSuccessful()) search(); ViewCuratorLessons.status.setText(result.getMessage());
     }

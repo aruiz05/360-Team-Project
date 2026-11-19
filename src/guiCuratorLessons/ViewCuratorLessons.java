@@ -11,8 +11,7 @@ import javafx.stage.Stage;
 /*******
  * <p> Title: ViewCuratorLessons Class. </p>
  * <p> Description: Cross-Contributor lesson review, manually reviewed core and terms, and
- * independent protections. Tested by TP3DiscoveryGuiTestingAutomation. AI and statistics
- * remain separate planned increments.</p>
+ * independent protections. Tested by TP3DiscoveryGuiTestingAutomation. Statistics open in a separate MVC workflow; AI remains a later increment.</p>
  * @author CSE 360 Team Project
  * @version 1.00 2026-11-19 Phase 3 Curator core operations
  */
@@ -42,6 +41,8 @@ public class ViewCuratorLessons {
         query = new TextField(); query.setPromptText("Search core and saved terms"); query.setId("curator-query");
         Button search = new Button("Search"), all = new Button("Show All"), reload = new Button("Reload Selected");
         Button home = new Button("Curator Home");
+        Button statistics = new Button("Statistics and Visibility");
+        statistics.setOnAction(e -> ControllerCuratorLessons.statistics());
         search.setOnAction(e -> ControllerCuratorLessons.search()); query.setOnAction(e -> ControllerCuratorLessons.search());
         all.setOnAction(e -> { query.clear(); ControllerCuratorLessons.search(); });
         reload.setOnAction(e -> ControllerCuratorLessons.read());
@@ -73,7 +74,7 @@ public class ViewCuratorLessons {
         identity = new Label("Select a lesson to review."); identity.setId("curator-identity");
         status = new Label(); status.setId("curator-status"); status.setWrapText(true);
         Label heading = new Label("Curator Lesson Review"); guiTools.ASUTheme.stylePageTitle(heading);
-        VBox root = new VBox(10, heading, new HBox(10, query, search, all, reload), identity, center, status, home);
+        VBox root = new VBox(10, heading, new HBox(10, query, search, all, reload), identity, center, status, new HBox(10, statistics, home));
         root.setPadding(new Insets(20)); Scene scene = new Scene(root, 1000, 720); guiTools.ASUTheme.apply(scene);
         stage.setScene(scene); stage.setTitle("CSE 360: Curator Lessons"); ControllerCuratorLessons.clear(); ControllerCuratorLessons.search(); stage.show();
     }
